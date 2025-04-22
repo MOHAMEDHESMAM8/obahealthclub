@@ -83,9 +83,14 @@ function display_pmpro_simple_price() {
 function display_pmpro_full_price_table() {
     global $product;
     
-    if (!$product) return;
+    if (!$product || !is_object($product)) {
+        return;
+    }
     
     $price_data = get_pmpro_price_display($product->get_id());
+    if (empty($price_data)) {
+        return;
+    }
     
     // Start output buffer to allow conditional display
     ob_start();
@@ -115,26 +120,41 @@ function display_pmpro_full_price_table() {
     $filtered_levels = array();
     $has_valid_levels = false;
     
-    foreach ($available_levels as $level) {
-        if (in_array($level->id, $levels_in_group) && $level->id > $current_level_id) {
+    if (is_array($available_levels)) {
+        foreach ($available_levels as $level) {
+            // Skip if level is invalid or doesn't have required properties
+            if (empty($level) || !is_object($level) || empty($level->id) || empty($level->name)) {
+                continue;
+            }
+
+            // Skip if level is not in the group or not higher than current level
+            if (!in_array($level->id, $levels_in_group) || $level->id <= $current_level_id) {
+                continue;
+            }
+
             $level_price = get_post_meta($product->get_id(), '_level_' . $level->id . '_price', true);
             
+            // If no specific price is set, calculate based on discount
             if (empty($level_price)) {
                 $discount = get_option('pmpro_level_' . $level->id . '_discount', 0);
-                $level_price = $discount > 0 ? $price_data['original_price'] * (1 - ($discount / 100)) : $price_data['original_price'];
+                // Skip if discount is 0 or invalid
+                if (empty($discount) || !is_numeric($discount)) {
+                    continue;
+                }
+                $level_price = $price_data['original_price'] * (1 - ($discount / 100));
             }
             
-            // Verify the price is reasonable (not zero or negative)
-            $is_valid_price = (is_numeric($level_price) && $level_price > 0);
-            
-            // Only add levels with valid names and valid prices
-            if (!empty($level->name) && $is_valid_price) {
-                $filtered_levels[$level->id] = array(
-                    'level' => $level,
-                    'price' => $level_price
-                );
-                $has_valid_levels = true;
+            // Verify the price is reasonable (not zero, negative, or invalid)
+            if (!is_numeric($level_price) || $level_price <= 0) {
+                continue;
             }
+            
+            // Add valid level to filtered levels
+            $filtered_levels[$level->id] = array(
+                'level' => $level,
+                'price' => $level_price
+            );
+            $has_valid_levels = true;
         }
     }
     
@@ -315,14 +335,14 @@ function pmpro_price_display_css() {
     <style>
         .pmpro-price-display { margin-bottom: 20px; }
         .original-price { text-decoration: line-through; color: #999; margin-right: 10px; }
-        .member-price { font-weight: bold; color: #0f834d; }
+        .member-price { font-weight: bold; color:rgb(255, 255, 255); }
         .subscription-suffix { font-size: 0.85em; font-weight: normal; color:#fff !important; }
         .member-level-note { display: block; font-size: 0.8em; color: #555; margin-top: 3px; }
         .other-membership-prices { border-top: 1px solid #eee; padding-top: 10px; font-size: 0.9em; }
         .other-prices-heading { font-weight: bold; margin-bottom: 8px; }
         .membership-price-option { display: flex; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
         .level-name { width: 40%; font-weight: 500; }
-        .level-price { width: 20%; color: #0f834d; }
+        .level-price { width: 20%; color:rgb(255, 255, 255); }
         .custom-get-btn { color: #000 !important; }
         .custom-get-btn:hover { color:#fff; }
         tbody th { color:#000 !important; }
@@ -330,16 +350,16 @@ function pmpro_price_display_css() {
         .member-price bdi, .price .amount bdi, .original-price .amount bdi { color:#fff !important; }
         .price-wrap { display:none !important; }
         .pmpro-original-price { color: #999; font-size: 0.9em; text-decoration: line-through; }
-        .pmpro-member-price { font-weight: bold; color: #0f834d; }
-        .pmpro-discount-note { color: #0f834d; display: inline-block; margin-top: 3px; font-size: 0.8em; }
+        .pmpro-member-price { font-weight: bold; color:rgb(255, 255, 255); }
+        .pmpro-discount-note { color:rgb(255, 255, 255); display: inline-block; margin-top: 3px; font-size: 0.8em; }
         body.woocommerce-page .woocommerce-info { background-color: #bb9a2a; }
         .membership-note { background-color: #bb9a2a; }
         .cart-discount-total { display: flex; flex-direction: column; }
         .cart-original-total { color: #999; }
         .original-total-amount { text-decoration: line-through; }
-        .cart-savings { color: #0f834d; }
-        .member-savings-amount { font-weight: bold; color: #0f834d; }
-        .member-savings-note { font-size: 0.45em; color: #0f834d; margin-top: 3px; }
+        .cart-savings { color:rgb(255, 255, 255); }
+        .member-savings-amount { font-weight: bold; color:rgb(255, 255, 255); }
+        .member-savings-note { font-size: 0.45em; color:rgb(255, 255, 255); margin-top: 3px; }
         
         /* Responsive adjustments */
         @media (max-width: 768px) {
