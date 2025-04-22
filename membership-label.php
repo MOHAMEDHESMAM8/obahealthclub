@@ -1,3 +1,5 @@
+<?php
+
 /**
  * Display original price and membership price for Paid Memberships Pro
  * Optimized version with cart total original price display in cart totals table
@@ -248,16 +250,13 @@ function pmpro_add_original_price_row_to_cart_totals($cart) {
         $savings = $original_total - $member_total;
         $savings_percentage = ($savings / $original_total) * 100;
         
-        ?>
-        <tr class="cart-original-total">
-            <th>Total</th>
-            <td data-title="Total">
-                <span class="original-total-amount"><?php echo wc_price($original_total); ?></span>
-				<span class="member-savings-amount"><?php echo wc_price($savings); ?> (<?php echo round($savings_percentage, 1); ?>%)</span>
-            </td>
-        </tr>
-      
-        <?php
+        echo '<tr class="cart-original-total">';
+        echo '<th>Total</th>';
+        echo '<td data-title="Total">';
+        echo '<span class="original-total-amount">' . wc_price($original_total) . '</span><br>';
+        echo '<span class="member-savings-amount">You save ' . wc_price($savings) . ' (' . round($savings_percentage, 1) . '%)</span>';
+        echo '</td>';
+        echo '</tr>';
     }
 }
 
@@ -326,7 +325,7 @@ function pmpro_price_display_css() {
         .level-price { width: 20%; color: #0f834d; }
         .custom-get-btn { color: #000 !important; }
         .custom-get-btn:hover { color:#fff; }
-		tbody th { color:#000 !important; }
+        tbody th { color:#000 !important; }
 
         .member-price bdi, .price .amount bdi, .original-price .amount bdi { color:#fff !important; }
         .price-wrap { display:none !important; }
@@ -341,7 +340,7 @@ function pmpro_price_display_css() {
         .cart-savings { color: #0f834d; }
         .member-savings-amount { font-weight: bold; color: #0f834d; }
         .member-savings-note { font-size: 0.45em; color: #0f834d; margin-top: 3px; }
-		
+        
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .membership-price-option { margin-bottom: 15px; }
