@@ -67,12 +67,13 @@ function product_grid_shortcode($atts) {
     }
 
     $all_products = array();
-    $needed_products = 6;
+    $needed_products = 8;
 
     // First Priority: Products matching both user data AND categories
     if (!empty($user_gender) && !empty($user_age_category) && !empty($user_categories)) {
         $first_priority_args = array(
             'post_type' => 'product',
+            'post_status' => 'publish',
             'posts_per_page' => $needed_products,
             'orderby' => 'date',
             'order' => 'DESC',
@@ -103,14 +104,15 @@ function product_grid_shortcode($atts) {
         );
         
         $first_priority_products = wc_get_products($first_priority_args);
-        $all_products = array_merge($all_products, $first_priority_products);
-        $needed_products = 6 - count($all_products);
+        $all_products = array_slice(array_merge($all_products, $first_priority_products), 0, $needed_products);
+        $needed_products = 8 - count($all_products);
     }
 
-    // Second Priority: Products matching user interests (categories)
+    // Second Priority: Products matching user interests
     if ($needed_products > 0 && !empty($user_categories)) {
         $second_priority_args = array(
             'post_type' => 'product',
+            'post_status' => 'publish',
             'posts_per_page' => $needed_products,
             'orderby' => 'date',
             'order' => 'DESC',
@@ -128,11 +130,11 @@ function product_grid_shortcode($atts) {
         );
         
         $second_priority_products = wc_get_products($second_priority_args);
-        $all_products = array_merge($all_products, $second_priority_products);
-        $needed_products = 6 - count($all_products);
+        $all_products = array_slice(array_merge($all_products, $second_priority_products), 0, 8);
+        $needed_products = 8 - count($all_products);
     }
 
-    // Third Priority: Products matching just user data (gender/age)
+    // Third Priority: Products matching just user data
     if ($needed_products > 0 && (!empty($user_gender) || !empty($user_age_category))) {
         $tax_query = array('relation' => 'AND');
         
@@ -156,6 +158,7 @@ function product_grid_shortcode($atts) {
         
         $third_priority_args = array(
             'post_type' => 'product',
+            'post_status' => 'publish',
             'posts_per_page' => $needed_products,
             'orderby' => 'date',
             'order' => 'DESC',
@@ -166,14 +169,15 @@ function product_grid_shortcode($atts) {
         );
         
         $third_priority_products = wc_get_products($third_priority_args);
-        $all_products = array_merge($all_products, $third_priority_products);
-        $needed_products = 6 - count($all_products);
+        $all_products = array_slice(array_merge($all_products, $third_priority_products), 0, 8);
+        $needed_products = 8 - count($all_products);
     }
 
     // Last Priority: Latest products
     if ($needed_products > 0) {
         $last_priority_args = array(
             'post_type' => 'product',
+            'post_status' => 'publish',
             'posts_per_page' => $needed_products,
             'orderby' => 'date',
             'order' => 'DESC',
@@ -183,12 +187,15 @@ function product_grid_shortcode($atts) {
         );
         
         $last_priority_products = wc_get_products($last_priority_args);
-        $all_products = array_merge($all_products, $last_priority_products);
+        $all_products = array_slice(array_merge($all_products, $last_priority_products), 0, 8);
     }
 
     if (empty($all_products)) {
         return '';
     }
+
+    // Ensure we only have 8 products
+    $all_products = array_slice($all_products, 0, 8);
 
     ob_start();
     ?>
@@ -206,13 +213,21 @@ function product_grid_shortcode($atts) {
                                 (!empty($user_age_category) && in_array($user_age_category, $product_tags));
             $matches_interests = !empty($user_categories) && !empty(array_intersect($product_categories, $user_categories));
             $matches_both = $matches_user_data && $matches_interests;
+
+            // Get the product categories for display
+            $categories = get_the_terms($product->get_id(), 'product_cat');
+            $category_names = array();
+            if ($categories && !is_wp_error($categories)) {
+                foreach($categories as $category) {
+                    $category_names[] = $category->name;
+                }
+            }
         ?>
             <div class="product-item <?php echo $matches_both ? 'priority-one' : ($matches_interests ? 'priority-two' : ($matches_user_data ? 'priority-three' : '')); ?>">
-                <div class="product-image">
-                    <?php echo $product->get_image('woocommerce_thumbnail'); ?>
-                </div>
-                <div class="product-content">
-                    <h3><?php echo esc_html($product->get_name()); ?></h3>
+                <div class="product-image-wrapper">
+                    <a href="<?php echo esc_url(get_permalink($product->get_id())); ?>" class="product-image-link">
+                        <?php echo $product->get_image('woocommerce_thumbnail'); ?>
+                    </a>
                     <?php if ($matches_both) : ?>
                         <div class="priority-badge gold">Perfect Match</div>
                     <?php elseif ($matches_interests) : ?>
@@ -220,6 +235,18 @@ function product_grid_shortcode($atts) {
                     <?php elseif ($matches_user_data) : ?>
                         <div class="priority-badge bronze">Recommended for You</div>
                     <?php endif; ?>
+                </div>
+                <div class="product-content">
+                    <?php if (!empty($category_names)) : ?>
+                        <div class="product-category">
+                            <?php echo esc_html(implode(', ', $category_names)); ?>
+                        </div>
+                    <?php endif; ?>
+                    <h3 class="product-title">
+                        <a href="<?php echo esc_url(get_permalink($product->get_id())); ?>">
+                            <?php echo esc_html($product->get_name()); ?>
+                        </a>
+                    </h3>
                     <div class="price">
                         <?php if ($has_discount) : ?>
                             <span class="original-price"><del><?php echo format_price_with_subscription($price_data['original_price'], $product->get_id()); ?></del></span>
@@ -231,17 +258,122 @@ function product_grid_shortcode($atts) {
                             <span class="regular-price"><?php echo format_price_with_subscription($price_data['original_price'], $product->get_id()); ?></span>
                         <?php endif; ?>
                     </div>
+                   
                     <div class="add-to-cart">
-                        <?php woocommerce_template_loop_add_to_cart(); ?>
-                    </div>
+                            <a href="javascript:void(0);" 
+                               class="button custom-add-to-cart" 
+                               data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
+                               data-quantity="1">
+                                <i class="default"></i>
+                                <span class="space"></span>
+                                <span>Add to cart</span>
+                            </a>
+                        </div>
+                        <div class="buy-now">
+                            <a href="<?php echo esc_url(wc_get_checkout_url() . '?buy-now=' . $product->get_id()); ?>" 
+                               class="button product_type_simple" 
+                               data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
+                               rel="nofollow">Buy now</a>
+                        </div>
                 </div>
             </div>
         <?php endforeach; ?>
     </div>
+
+    <script>
+    jQuery(document).ready(function($) {
+        // Custom add to cart handling
+        $('.custom-add-to-cart').on('click', function(e) {
+            e.preventDefault();
+            
+            var $thisButton = $(this);
+            var product_id = $thisButton.data('product_id');
+            var quantity = $thisButton.data('quantity');
+            
+            // Add loading class
+            $thisButton.addClass('loading');
+            
+            // AJAX add to cart
+            $.ajax({
+                type: 'POST',
+                url: wc_add_to_cart_params.ajax_url,
+                data: {
+                    action: 'woocommerce_ajax_add_to_cart',
+                    product_id: product_id,
+                    quantity: quantity
+                },
+                success: function(response) {
+                    // Remove loading class
+                    $thisButton.removeClass('loading');
+                    
+                    if(response.error & response.product_url) {
+                        window.location = response.product_url;
+                        return;
+                    }
+                    
+                    // Trigger event so cart widget updates
+                    $(document.body).trigger('added_to_cart', [response.fragments, response.cart_hash, $thisButton]);
+                    
+                    // Don't change the button to "View Cart"
+                    // Just add a small visual feedback and keep the button as "Add to Cart"
+                    $thisButton.addClass('added');
+                    setTimeout(function() {
+                        $thisButton.removeClass('added');
+                    }, 1000);
+                },
+                error: function() {
+                    $thisButton.removeClass('loading');
+                }
+            });
+        });
+        
+        // Remove "added_to_cart" event handlers that would change our button
+        $(document.body).off('added_to_cart.custom_grid');
+        $(document.body).on('added_to_cart.custom_grid', function(e, fragments, cart_hash, $button) {
+            if ($button.hasClass('custom-add-to-cart')) {
+                // Prevent default WooCommerce behavior
+                e.stopImmediatePropagation();
+            }
+        });
+    });
+    </script>
+
+    <style>
+        /* Add some visual feedback for the add to cart button */
+        .custom-add-to-cart.loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .custom-add-to-cart.added {
+            background-color: #4CAF50 !important;
+            color: white !important;
+        }
+        
+        /* Animation for added to cart */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .custom-add-to-cart.added {
+            animation: pulse 0.5s ease-in-out;
+        }
+    </style>
     <?php
     return ob_get_clean();
 }
 add_shortcode('product_grid', 'product_grid_shortcode');
+
+/**
+ * Add AJAX add to cart handler
+ */
+function custom_ajax_add_to_cart_handler() {
+    WC_AJAX::add_to_cart();
+}
+add_action('wp_ajax_woocommerce_ajax_add_to_cart', 'custom_ajax_add_to_cart_handler');
+add_action('wp_ajax_nopriv_woocommerce_ajax_add_to_cart', 'custom_ajax_add_to_cart_handler');
 
 /**
  * Add grid styles
@@ -251,25 +383,102 @@ function product_grid_styles() {
     <style>
         .product-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
-            margin: 20px 0;
+            margin: 20px auto;
+            justify-content: center;
+            max-width: 1400px;
+            width: 100%;
         }
+
         .product-item {
             border: 1px solid #eee;
-            padding: 15px;
-            text-align: center;
+            background: var(--main-bg-color, #071938);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .product-image-wrapper {
             position: relative;
+            width: 100%;
+            overflow: hidden;
+            aspect-ratio: 1;
         }
-        .product-item.priority-one {
-            border: 2px solid #FFD700;
+
+        .product-image-link {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
-        .product-item.priority-two {
-            border: 2px solid #C0C0C0;
+
+        .product-image-link img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
         }
-        .product-item.priority-three {
-            border: 2px solid #CD7F32;
+
+        .product-image-link:hover img {
+            transform: scale(1.05);
         }
+
+        .product-category {
+            font-family: 'Montserrat', sans-serif;
+            font-style: normal;
+            font-weight: 500;
+            font-size: 9px;
+            line-height: 10.8px;
+            text-transform: uppercase;
+            letter-spacing: 0.45px;
+            color: var(--thegem-to-product-grid-category-color, #99A9B5);
+            margin-bottom: 5px;
+            transition: color 0.3s;
+        }
+
+        .product-category:hover {
+            color: var(--thegem-to-product-grid-category-hover-color, #BB9A2A);
+        }
+
+        .product-title {
+            margin: 10px 0;
+            font-family: 'Montserrat', sans-serif;
+            font-style: normal;
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 18.2px;
+            max-height: calc(18.2px * 2);
+            overflow: hidden;
+        }
+
+        .product-title a {
+            color: var(--thegem-to-product-grid-title-color, #BB9A2A);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .product-title a:hover {
+            color: var(--thegem-to-product-grid-title-hover-color, #3C3950);
+        }
+
+        .product-content {
+            padding: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .price {
+            margin: 10px 0;
+            font-family: 'Source Sans Pro', sans-serif;
+            font-style: normal;
+            font-weight: normal;
+            font-size: 18px;
+            line-height: 18px;
+            color: var(--thegem-to-product-grid-price-color, #FFF);
+        }
+
         .priority-badge {
             position: absolute;
             top: 10px;
@@ -279,63 +488,114 @@ function product_grid_styles() {
             font-size: 0.8em;
             font-weight: bold;
             color: white;
+            z-index: 1;
         }
+
         .priority-badge.gold {
             background: #FFD700;
             color: #000;
         }
+
         .priority-badge.silver {
             background: #C0C0C0;
             color: #000;
         }
+
         .priority-badge.bronze {
             background: #CD7F32;
         }
-        .product-image img {
-            max-width: 100%;
-            height: auto;
+
+        .product-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 0 15px 15px;
+            width: 100%;
         }
-        .product-content h3 {
-            margin: 10px 0;
-            font-size: 16px;
+        .product-content .add-to-cart {
+            margin-bottom: 10px;
         }
-        .price {
-            margin: 10px 0;
+        .add-to-cart,
+        .buy-now {
+            flex: 1;
+            margin: 0;
         }
-        .original-price {
-            text-decoration: line-through;
-            color: #999;
-            margin-right: 10px;
+
+        .add-to-cart a,
+        .buy-now a {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            text-align: center;
+            font-family: var(--thegem-to-button-font-family, 'Plus Jakarta Sans');
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.2;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin: 0;
         }
-        .member-price {
-            font-weight: bold;
-            color: #bb9a2a;
+
+        .add-to-cart a {
+            background: var(--thegem-to-button-basic-background-color, #BB9A2A);
+            color: var(--thegem-to-button-basic-color, #000);
         }
-        .member-level-note {
-            display: block;
-            font-size: 0.8em;
-            color: #555;
-            margin-top: 3px;
+
+        .buy-now a {
+            background: var(--thegem-to-styled-color4, #000);
+            color: var(--thegem-to-styled-color2, #FFF);
         }
-        .subscription-suffix {
-            font-size: 0.85em;
-            font-weight: normal;
-            color: #666;
+
+        .add-to-cart a:hover {
+            background: var(--thegem-to-button-basic-background-color-hover, #0D2E37);
+            color: var(--thegem-to-button-basic-color-hover, #fff);
         }
-        .add-to-cart {
-            margin-top: 10px;
+
+        .buy-now a:hover {
+            background: var(--thegem-to-styled-color3, #BB9A2A);
+            color: var(--thegem-to-styled-color2, #FFF);
         }
+
+        .add-to-cart a i.default {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .add-to-cart a span.space {
+            display: inline-block;
+            width: 5px;
+        }
+
+        .add-to-cart a span {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         @media (max-width: 992px) {
             .product-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 1100px;
             }
         }
+
+        @media (max-width: 768px) {
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 800px;
+            }
+        }
+
         @media (max-width: 576px) {
             .product-grid {
                 grid-template-columns: 1fr;
+                max-width: 400px;
             }
         }
     </style>
     <?php
 }
-add_action('wp_head', 'product_grid_styles'); 
+add_action('wp_head', 'product_grid_styles');
