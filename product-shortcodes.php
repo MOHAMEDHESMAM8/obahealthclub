@@ -33,9 +33,27 @@ function get_user_age_category($birth_date) {
 
 /**
  * Shortcode to display products with gender and age-specific products prioritized
- * Usage: [product_grid]
+ * Usage: [product_grid] or [product_grid count="12" grid="3"]
  */
 function product_grid_shortcode($atts) {
+    // Parse shortcode attributes
+    $atts = shortcode_atts(array(
+        'count' => 8,
+        'grid' => 4, // Default number of products per row
+    ), $atts, 'product_grid');
+    
+    // Get the count of products to show
+    $display_count = absint($atts['count']);
+    if ($display_count < 1) {
+        $display_count = 8; // Fallback if an invalid number is provided
+    }
+    
+    // Get number of products per row
+    $grid_columns = absint($atts['grid']);
+    if ($grid_columns < 1 || $grid_columns > 6) {
+        $grid_columns = 4; // Fallback to default if invalid
+    }
+    
     // Get user's gender and age from meta
     $user_gender = '';
     $user_age_category = '';
@@ -67,7 +85,7 @@ function product_grid_shortcode($atts) {
     }
 
     $all_products = array();
-    $needed_products = 8;
+    $needed_products = $display_count;
 
     // First Priority: Products matching both user data AND categories
     if (!empty($user_gender) && !empty($user_age_category) && !empty($user_categories)) {
@@ -105,7 +123,7 @@ function product_grid_shortcode($atts) {
         
         $first_priority_products = wc_get_products($first_priority_args);
         $all_products = array_slice(array_merge($all_products, $first_priority_products), 0, $needed_products);
-        $needed_products = 8 - count($all_products);
+        $needed_products = $display_count - count($all_products);
     }
 
     // Second Priority: Products matching user interests
@@ -130,8 +148,8 @@ function product_grid_shortcode($atts) {
         );
         
         $second_priority_products = wc_get_products($second_priority_args);
-        $all_products = array_slice(array_merge($all_products, $second_priority_products), 0, 8);
-        $needed_products = 8 - count($all_products);
+        $all_products = array_slice(array_merge($all_products, $second_priority_products), 0, $display_count);
+        $needed_products = $display_count - count($all_products);
     }
 
     // Third Priority: Products matching just user data
@@ -169,8 +187,8 @@ function product_grid_shortcode($atts) {
         );
         
         $third_priority_products = wc_get_products($third_priority_args);
-        $all_products = array_slice(array_merge($all_products, $third_priority_products), 0, 8);
-        $needed_products = 8 - count($all_products);
+        $all_products = array_slice(array_merge($all_products, $third_priority_products), 0, $display_count);
+        $needed_products = $display_count - count($all_products);
     }
 
     // Last Priority: Latest products
@@ -187,19 +205,19 @@ function product_grid_shortcode($atts) {
         );
         
         $last_priority_products = wc_get_products($last_priority_args);
-        $all_products = array_slice(array_merge($all_products, $last_priority_products), 0, 8);
+        $all_products = array_slice(array_merge($all_products, $last_priority_products), 0, $display_count);
     }
 
     if (empty($all_products)) {
         return '';
     }
 
-    // Ensure we only have 8 products
-    $all_products = array_slice($all_products, 0, 8);
+    // Ensure we only have the requested number of products
+    $all_products = array_slice($all_products, 0, $display_count);
 
     ob_start();
     ?>
-    <div class="product-grid">
+    <div class="product-grid" style="grid-template-columns: repeat(<?php echo esc_attr($grid_columns); ?>, 1fr);">
         <?php foreach ($all_products as $product) : 
             $price_data = get_pmpro_price_display($product->get_id());
             $is_member = !empty($price_data['membership_level']);
@@ -226,7 +244,7 @@ function product_grid_shortcode($atts) {
             <div class="product-item <?php echo $matches_both ? 'priority-one' : ($matches_interests ? 'priority-two' : ($matches_user_data ? 'priority-three' : '')); ?>">
                 <div class="product-image-wrapper">
                     <a href="<?php echo esc_url(get_permalink($product->get_id())); ?>" class="product-image-link">
-                        <?php echo $product->get_image('woocommerce_thumbnail'); ?>
+                        <?php echo $product->get_image('large'); ?>
                     </a>
                     <?php if ($matches_both) : ?>
                         <div class="priority-badge gold">Perfect Match</div>
@@ -264,7 +282,7 @@ function product_grid_shortcode($atts) {
                                class="button custom-add-to-cart" 
                                data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
                                data-quantity="1">
-                                <i class="default"></i>
+                               <i class="default"></i>
                                 <span class="space"></span>
                                 <span>Add to cart</span>
                             </a>
@@ -290,8 +308,9 @@ function product_grid_shortcode($atts) {
             var product_id = $thisButton.data('product_id');
             var quantity = $thisButton.data('quantity');
             
-            // Add loading class
-            $thisButton.addClass('loading');
+            // Don't add loading class that hides the button
+            // Instead use a visual indicator that doesn't hide content
+            $thisButton.addClass('is-loading');
             
             // AJAX add to cart
             $.ajax({
@@ -304,7 +323,7 @@ function product_grid_shortcode($atts) {
                 },
                 success: function(response) {
                     // Remove loading class
-                    $thisButton.removeClass('loading');
+                    $thisButton.removeClass('is-loading');
                     
                     if(response.error & response.product_url) {
                         window.location = response.product_url;
@@ -314,18 +333,62 @@ function product_grid_shortcode($atts) {
                     // Trigger event so cart widget updates
                     $(document.body).trigger('added_to_cart', [response.fragments, response.cart_hash, $thisButton]);
                     
-                    // Don't change the button to "View Cart"
-                    // Just add a small visual feedback and keep the button as "Add to Cart"
+                    // Add the "added" class to the button for visual feedback
+                    // But don't change visibility or structure
                     $thisButton.addClass('added');
                     setTimeout(function() {
                         $thisButton.removeClass('added');
                     }, 1000);
+                    
+                    // Show custom notification
+                    showAddToCartNotification();
                 },
                 error: function() {
-                    $thisButton.removeClass('loading');
+                    $thisButton.removeClass('is-loading');
                 }
             });
         });
+        
+        // Function to show notification
+        function showAddToCartNotification() {
+            // Check if notification already exists
+            var $existingNotification = $('#thegem-cart-notification');
+            if ($existingNotification.length) {
+                $existingNotification.remove();
+            }
+            
+            // Create notification HTML
+            var notificationHtml = `
+               <div class="thegem-popup-notification-wrap" id="thegem-cart-notification">
+                   <div class="thegem-popup-notification cart" data-timing="4000">
+                       <div class="notification-message">
+                           <span class="checkmark">✓</span>
+                           Item added to cart
+                           <span class="buttons">
+                               <a class="button" href="<?php echo esc_url(wc_get_cart_url()); ?>">View Cart</a>
+                               <a class="button" href="<?php echo esc_url(wc_get_checkout_url()); ?>">Checkout</a>
+                           </span>
+                       </div>
+                   </div>
+               </div>
+            `;
+            
+            // Append to body
+            $('body').append(notificationHtml);
+            
+            // Add active class with slight delay to trigger animation
+            setTimeout(function() {
+                $('#thegem-cart-notification').addClass('active');
+            }, 10);
+            
+            // Remove after timeout
+            setTimeout(function() {
+                $('#thegem-cart-notification').removeClass('active');
+                setTimeout(function() {
+                    $('#thegem-cart-notification').remove();
+                }, 500);
+            }, 4000);
+        }
         
         // Remove "added_to_cart" event handlers that would change our button
         $(document.body).off('added_to_cart.custom_grid');
@@ -345,11 +408,49 @@ function product_grid_shortcode($atts) {
             pointer-events: none;
         }
         
+        /* New loading indicator that doesn't hide the button */
+        .custom-add-to-cart.is-loading {
+            position: relative;
+            color: inherit !important;
+            opacity: 0.7;
+        }
+        
+        .custom-add-to-cart.is-loading:after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            animation: spin 0.75s infinite linear;
+            pointer-events: none;
+        }
+        
+        @keyframes spin {
+            from {transform: rotate(0deg);}
+            to {transform: rotate(360deg);}
+        }
+        
         .custom-add-to-cart.added {
             background-color: #4CAF50 !important;
             color: white !important;
         }
-        
+        .add-to-cart .default {
+            font-style: normal;
+            font-family: 'thegem-icons';
+            font-weight: normal;
+            -webkit-font-smoothing: initial;
+            color: currentColor;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .add-to-cart i.default:before{   
+            content: '\e67e';
+        }
         /* Animation for added to cart */
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -359,6 +460,97 @@ function product_grid_shortcode($atts) {
         
         .custom-add-to-cart.added {
             animation: pulse 0.5s ease-in-out;
+        }
+        
+        /* Notification popup styles */
+        .thegem-popup-notification-wrap {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            width: auto;
+            min-width: 300px;
+            max-width: 90%;
+        }
+        
+        .thegem-popup-notification-wrap.active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        
+        .thegem-popup-notification {
+            background-color: #071938;
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 15px 25px;
+            width: 100%;
+        }
+        
+        .thegem-popup-notification .notification-message {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 16px;
+            line-height: 1.5;
+            text-align: center;
+        }
+        
+        .thegem-popup-notification .checkmark {
+            display: inline-block;
+            margin-right: 10px;
+            color: #ffffff;
+            font-size: 18px;
+        }
+        
+        .thegem-popup-notification .buttons {
+            display: flex;
+            gap: 10px;
+            margin-left: 15px;
+            justify-content: center;
+        }
+        
+        .thegem-popup-notification .buttons .button {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-align: center;
+            border: 1px solid #ffffff;
+            background: transparent;
+            color: #ffffff;
+        }
+        
+        .thegem-popup-notification .buttons .button:last-child {
+            background-color: #ffffff;
+            color: #0a2240;
+        }
+        
+        .thegem-popup-notification .buttons .button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        @media (max-width: 768px) {
+            .thegem-popup-notification .notification-message {
+                flex-direction: column;
+            }
+            
+            .thegem-popup-notification .buttons {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
         }
     </style>
     <?php
@@ -383,8 +575,8 @@ function product_grid_styles() {
     <style>
         .product-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            /* grid-template-columns is now set inline via style attribute */
+            gap: 42px;
             margin: 20px auto;
             justify-content: center;
             max-width: 1400px;
@@ -392,7 +584,6 @@ function product_grid_styles() {
         }
 
         .product-item {
-            border: 1px solid #eee;
             background: var(--main-bg-color, #071938);
             overflow: hidden;
             transition: all 0.3s ease;
@@ -405,7 +596,7 @@ function product_grid_styles() {
             position: relative;
             width: 100%;
             overflow: hidden;
-            aspect-ratio: 1;
+            height: 326px;
         }
 
         .product-image-link {
@@ -419,6 +610,9 @@ function product_grid_styles() {
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s ease;
+            max-width: 100%;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
 
         .product-image-link:hover img {
@@ -465,6 +659,7 @@ function product_grid_styles() {
 
         .product-content {
             padding: 15px;
+            padding-bottom: 0;
             width: 100%;
             text-align: center;
         }
@@ -489,6 +684,7 @@ function product_grid_styles() {
             font-weight: bold;
             color: white;
             z-index: 1;
+            font-family: 'Montserrat', sans-serif;
         }
 
         .priority-badge.gold {
@@ -524,8 +720,9 @@ function product_grid_styles() {
         .add-to-cart a,
         .buy-now a {
             display: inline-block;
-            width: 100%;
-            padding: 12px 20px;
+            width: auto;
+            min-width: 120px;
+            padding: 12px 24px;
             text-align: center;
             font-family: var(--thegem-to-button-font-family, 'Plus Jakarta Sans');
             font-weight: 600;
@@ -533,11 +730,18 @@ function product_grid_styles() {
             line-height: 1.2;
             text-transform: uppercase;
             text-decoration: none;
-            border-radius: 3px;
+            border-radius: 30px;
             transition: all 0.3s ease;
             border: none;
             cursor: pointer;
             margin: 0;
+        }
+        
+        .product-content .add-to-cart,
+        .product-content .buy-now {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
         }
 
         .add-to-cart a {
@@ -577,22 +781,19 @@ function product_grid_styles() {
 
         @media (max-width: 992px) {
             .product-grid {
-                grid-template-columns: repeat(3, 1fr);
-                max-width: 1100px;
+                grid-template-columns: repeat(3, 1fr) !important;
             }
         }
 
         @media (max-width: 768px) {
             .product-grid {
-                grid-template-columns: repeat(2, 1fr);
-                max-width: 800px;
+                grid-template-columns: repeat(2, 1fr) !important;
             }
         }
 
         @media (max-width: 576px) {
             .product-grid {
-                grid-template-columns: 1fr;
-                max-width: 400px;
+                grid-template-columns: 1fr !important;
             }
         }
     </style>

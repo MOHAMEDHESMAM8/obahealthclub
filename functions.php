@@ -14,3 +14,6 @@ require_once get_stylesheet_directory() . '/membership-label.php';
 // Include product shortcodes
 require_once get_stylesheet_directory() . '/product-shortcodes.php';
 
+// Include my-account-products-tab.php
+require_once get_stylesheet_directory() . '/my-account-products-tab.php';
+
