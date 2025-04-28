@@ -1,76 +1,97 @@
 # OBA-MDCLARA System Integration
 
-## 0. SSO Concept
+## 1. SSO Concept
+### a. Doctors
 
 ```mermaid
 sequenceDiagram
-    actor User
+    actor Doctor
     participant OBA as OBA (WordPress)
     participant MDCLARA as MDCLARA (Laravel)
-    
-    User->>OBA: Login to OBA
-    OBA->>OBA: Authenticate User
-    User->>OBA: Access MDCLARA Dashboard
-    OBA->>MDCLARA: Send Authentication Token
-    Note over OBA,MDCLARA: JWT or OAuth
-    MDCLARA->>MDCLARA: Validate Token
-    MDCLARA->>User: Access Granted (No Login Required)
-```
-
-### Approach Options:
-
-**JWT-Based SSO:**
-```mermaid
-flowchart LR
-    A[OBA] -->|Issue JWT| B[Token]
-    B -->|Send with Request| C[MDCLARA]
-    C -->|Validate Token| D[Grant Access]
-```
-
-**OAuth-Based SSO:**
-```mermaid
-flowchart LR
-    A[OBA] -->|OAuth Authorization| B[Authorization Code]
-    B -->|Exchange for Token| C[Access Token]
-    C -->|Use Token| D[MDCLARA API]
-```
-
-## 1. Doctors Integration
-
-```mermaid
-sequenceDiagram
-    participant OBA as OBA (WordPress)
-    participant MDCLARA as MDCLARA (Laravel)
-    
+    Doctor->>OBA: Register/Login
+    OBA->>OBA: Verify Doctor Credentials
     OBA->>OBA: Doctor Approval Process
-    OBA->>MDCLARA: API Request (Create Doctor)
-    Note over OBA,MDCLARA: Doctor Data Sync
-    MDCLARA->>MDCLARA: Create Doctor Account
-    MDCLARA->>OBA: Confirmation Response
+    Doctor->>OBA: Access Dashboard
+    OBA->>MDCLARA: POST /api/doctors
+    Note over OBA,MDCLARA: Send Complete Doctor Data
+    MDCLARA->>MDCLARA: Create Doctor Account or Verify Doctor Status 
+    MDCLARA->>OBA: Return Reference ID & JWT
+    OBA->>OBA: Store Reference ID
+    OBA->>Doctor: Show MDCLARA Dashboard
+
 ```
+### Doctor Data:
+
+```json
+{
+    "reference_id": "DOC123456",
+    "first_name": "mohammad",
+    "last_name": "hisham",
+    "email": "m.hisham@iislb.com",
+    "date_of_birth": "04/04/2025",
+    "gender": "Male",
+    "speciality": "dr",
+    "biography": "",
+    "phone_type": "Home",
+    "npi": "qwq",
+    "dea": "qw",
+    "license": "qwq",
+    "dea_expiry_date": "mm/dd/yyyy",
+    "license_expiry_date": "mm/dd/yyyy",
+    "degree": "qw",
+    "licensed_states": "mm/dd/yyyy"
+}
+```
+## b. Patients  
+
+```mermaid
+sequenceDiagram
+    actor Patient
+    participant OBA as OBA (WordPress)
+    participant MDCLARA as MDCLARA (Laravel)
+    Patient->>OBA: Register/Login
+    OBA->>MDCLARA: POST /api/patients
+    Note over OBA,MDCLARA: Send patient Data
+    MDCLARA->>MDCLARA: Create Patient Account or Verify Patient Status 
+    MDCLARA->>OBA: Return Reference ID & JWT
+    OBA->>OBA: Store Reference ID
+    OBA->>Patient: Home
+
+```
+### Patient Data:
+
+```json
+{
+    "reference_id": "DOC123456",
+    "first_name": "mohammad",
+    "last_name": "hisham",
+    "email": "m.hisham@iislb.com",
+    "date_of_birth": "04/04/2025",
+    "gender": "Male",
+    "Phone  ": "1212",
+    "Country ": "EG",
+}
+```
+
+
+
+
+## 2. Doctor:
+The medical experts page retrieves doctor information from the OBA (WordPress) system.
 
 ### Doctor Profile Page:
+
 
 ```mermaid
 graph TD
     subgraph "Doctor Profile Page"
         A[Doctor Information] -->|From OBA| B[Doctor Profile]
-        C[Available Appointments] -->|From MDCLARA| B
+        C[Schedule] -->|From MDCLARA| B
     end
 ```
 
 ## 2. Patients Integration
 
-```mermaid
-sequenceDiagram
-    participant OBA as OBA (WordPress)
-    participant MDCLARA as MDCLARA (Laravel)
-    
-    OBA->>OBA: Patient Registration
-    OBA->>MDCLARA: Create Patient Request
-    MDCLARA->>MDCLARA: Create Patient Account
-    MDCLARA->>OBA: Confirmation Response
-```
 
 ### Patient Appointment Flow:
 
@@ -83,34 +104,12 @@ flowchart TD
     E -->|Sync to| F[OBA My Account]
 ```
 
-### Patient Dashboard:
+### Patient profile:
 
 ```mermaid
 graph TD
-    subgraph "Patient Dashboard"
-        A[My Appointments] -->|From MDCLARA| B[Appointments List]
-        C[Doctor Feedback] -->|From MDCLARA| B
+    subgraph "DATA"
+        A[My Appointments] -->|From MDCLARA| E[Patient Profile]
         D[Patient Information] -->|From OBA| E[Patient Profile]
     end
-```
-
-## Data Flow Architecture
-
-```mermaid
-flowchart LR
-    subgraph "OBA (WordPress)"
-        A[User Authentication]
-        B[Doctor Management]
-        C[Patient Profiles]
-    end
-    
-    subgraph "MDCLARA (Laravel)"
-        D[Appointment System]
-        E[Doctor Schedules]
-        F[Medical Records]
-    end
-    
-    A -->|SSO| D
-    B <-->|Two-way Sync| E
-    C <-->|Two-way Sync| F
 ```
