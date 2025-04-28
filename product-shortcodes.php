@@ -277,9 +277,9 @@ function product_grid_shortcode($atts) {
                         <?php endif; ?>
                     </div>
                    
-                    <div class="add-to-cart">
+                    <div class="custom-add-to-cart">
                             <a href="javascript:void(0);" 
-                               class="button custom-add-to-cart" 
+                               class="button" 
                                data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
                                data-quantity="1">
                                <i class="default"></i>
@@ -439,7 +439,7 @@ function product_grid_shortcode($atts) {
             background-color: #4CAF50 !important;
             color: white !important;
         }
-        .add-to-cart .default {
+        .custom-add-to-cart .default {
             font-style: normal;
             font-family: 'thegem-icons';
             font-weight: normal;
@@ -448,7 +448,7 @@ function product_grid_shortcode($atts) {
             font-size: 16px;
             line-height: 1;
         }
-        .add-to-cart i.default:before{   
+        .custom-add-to-cart i.default:before{   
             content: '\e67e';
         }
         /* Animation for added to cart */
@@ -584,7 +584,7 @@ function product_grid_styles() {
         }
 
         .product-item {
-            background: var(--main-bg-color, #071938);
+            
             overflow: hidden;
             transition: all 0.3s ease;
             display: flex;
@@ -627,13 +627,13 @@ function product_grid_styles() {
             line-height: 10.8px;
             text-transform: uppercase;
             letter-spacing: 0.45px;
-            color: var(--thegem-to-product-grid-category-color, #99A9B5);
+            color: var(--thegem-to-product-grid-category-color, #99A9B5)!important;
             margin-bottom: 5px;
             transition: color 0.3s;
         }
 
         .product-category:hover {
-            color: var(--thegem-to-product-grid-category-hover-color, #BB9A2A);
+            color: var(--thegem-to-product-grid-category-hover-color, #BB9A2A)!important;
         }
 
         .product-title {
@@ -648,13 +648,13 @@ function product_grid_styles() {
         }
 
         .product-title a {
-            color: var(--thegem-to-product-grid-title-color, #BB9A2A);
+            color: var(--thegem-to-product-grid-title-color, #BB9A2A) !important;
             text-decoration: none;
             transition: color 0.3s;
         }
 
         .product-title a:hover {
-            color: var(--thegem-to-product-grid-title-hover-color, #3C3950);
+            color: var(--thegem-to-product-grid-title-hover-color, #3C3950) !important;
         }
 
         .product-content {
@@ -689,7 +689,7 @@ function product_grid_styles() {
 
         .priority-badge.gold {
             background: #FFD700;
-            color: #000;
+            color: #000 !important;
         }
 
         .priority-badge.silver {
@@ -708,21 +708,19 @@ function product_grid_styles() {
             padding: 0 15px 15px;
             width: 100%;
         }
-        .product-content .add-to-cart {
+        .product-content .custom-add-to-cart {
             margin-bottom: 10px;
         }
-        .add-to-cart,
+        .custom-add-to-cart,
         .buy-now {
             flex: 1;
             margin: 0;
         }
 
-        .add-to-cart a,
+        .custom-add-to-cart a,
         .buy-now a {
             display: inline-block;
             width: auto;
-            min-width: 120px;
-            padding: 12px 24px;
             text-align: center;
             font-family: var(--thegem-to-button-font-family, 'Plus Jakarta Sans');
             font-weight: 600;
@@ -737,44 +735,49 @@ function product_grid_styles() {
             margin: 0;
         }
         
-        .product-content .add-to-cart,
+        .product-content .custom-add-to-cart,
         .product-content .buy-now {
             display: flex;
             justify-content: center;
             margin-bottom: 10px;
         }
 
-        .add-to-cart a {
-            background: var(--thegem-to-button-basic-background-color, #BB9A2A);
-            color: var(--thegem-to-button-basic-color, #000);
+        .custom-add-to-cart a {
+            background: var(--thegem-to-button-basic-background-color, #BB9A2A) !important;
+            color:#fff !important;
+            padding: 5px 16px 6px;
+            height: auto;
+            text-transform: capitalize;
+            border: 1px solid #BB9A2A;
         }
-
+        .custom-add-to-cart a:hover {
+            background: #000 !important;
+   
+        }
         .buy-now a {
-            background: var(--thegem-to-styled-color4, #000);
-            color: var(--thegem-to-styled-color2, #FFF);
-        }
-
-        .add-to-cart a:hover {
-            background: var(--thegem-to-button-basic-background-color-hover, #0D2E37);
-            color: var(--thegem-to-button-basic-color-hover, #fff);
+            background: #dfe5e8 !important;
+            color: #5f727f !important;
+            padding: 5px 9px 6px;
+            height: auto;
+            text-transform: capitalize;
         }
 
         .buy-now a:hover {
-            background: var(--thegem-to-styled-color3, #BB9A2A);
-            color: var(--thegem-to-styled-color2, #FFF);
+            background:#BB9A2A !important;
+            color: #FFF !important;
         }
 
-        .add-to-cart a i.default {
+        .custom-add-to-cart a i.default {
             display: inline-block;
             vertical-align: middle;
         }
 
-        .add-to-cart a span.space {
+        .custom-add-to-cart a span.space {
             display: inline-block;
             width: 5px;
         }
 
-        .add-to-cart a span {
+        .custom-add-to-cart a span {
             display: inline-block;
             vertical-align: middle;
         }

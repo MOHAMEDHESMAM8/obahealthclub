@@ -45,6 +45,23 @@ function recommended_products_tab_css() {
             .wcmamtx_notice_div.dashboard_text{
                 display: none !important;
             }
+            .woocommerce-MyAccount-content-wrapper{
+                background-color: #0A2148 !important; 
+                border:none !important;
+            }
+            .woocommerce-MyAccount-content-wrapper p strong ,
+            .woocommerce-MyAccount-content-wrapper *{
+               color: #fff !important;
+            }
+            .woocommerce-MyAccount-content-wrapper input ,
+            .woocommerce-MyAccount-content-wrapper select ,
+            .woocommerce-MyAccount-content-wrapper textarea
+            {
+                color:var(--forms-fields-normal-color,#69727d) !important;
+            }
+            .woocommerce-MyAccount-content-wrapper a{
+               color: #BB9A2A !important;
+            }
         </style>
         <?php
     }

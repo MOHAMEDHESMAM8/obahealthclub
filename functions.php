@@ -17,3 +17,7 @@ require_once get_stylesheet_directory() . '/product-shortcodes.php';
 // Include my-account-products-tab.php
 require_once get_stylesheet_directory() . '/my-account-products-tab.php';
 
+// Include pmpro-before-cancel.php
+require_once get_stylesheet_directory() . '/pmpro-before-cancel.php';
+
+

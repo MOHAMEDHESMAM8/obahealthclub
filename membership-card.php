@@ -27,6 +27,15 @@
 	} else {
 		$show_avatar = true;
 	}
+
+	// Get expiration date if available
+	$expiration_date = '';
+	if(isset($pmpro_membership_card_user->ID)) {
+		$membership_level = pmpro_getMembershipLevelForUser($pmpro_membership_card_user->ID);
+		$expiration_timestamp = $membership_level->enddate;
+		$expiration_date = date_i18n(get_option('date_format'), $expiration_timestamp);
+
+	}
 ?>
 <style>
 	/* Hide any thumbnail that might be on the page. */
@@ -42,7 +51,7 @@
 		border: 1px solid #000000;
 		border-radius: 10px;
 		margin: 0 0 20px 0;
-		background-image: url('http://obahealthclub.com/wp-content/uploads/2025/02/bg.jpg');
+		background-image: url('https://obahealthclub.com/wp-content/uploads/2025/04/bg-member.jpg');
 		background-size: cover;
 		background-position: center;
 		color: #fff;
@@ -60,7 +69,7 @@
 		flex-wrap: wrap;
 		position: relative;
 		z-index: 2;
-		background-color: rgba(255, 255, 255, 0.9);
+		background-color: #F7EDDE !important;
 		border-radius: 10px;
 	}
 	img.pmpro_membership_card_image {
@@ -330,7 +339,10 @@
 		}
 	}
 </style>
-<a class="pmpro_a-print" href="javascript:window.print()"><?php esc_html_e( 'Print', 'pmpro-membership-card' ); ?></a>
+<div class="pmpro-card-actions" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+    <a class="pmpro_a-print" href="javascript:window.print()"><?php esc_html_e( 'Print', 'pmpro-membership-card' ); ?></a>
+    <!-- ss <div class="wallet-button"><?php echo do_shortcode('[add_to_wallet]'); ?></div> -->
+</div>
 <div class="pmpro_membership_card">
 	<?php 
 		$featured_image = wp_get_attachment_url( get_post_thumbnail_id($post->ID) ); 
@@ -359,6 +371,9 @@
 						<?php } ?>
 						<?php if(!empty($since)) { ?>
 							<p><strong><?php esc_html_e( 'Member Since', 'pmpro-membership-card' ); ?>:</strong> <?php echo apply_filters('pmpro_membership_card_since_date', date_i18n( get_option("date_format"), strtotime( $pmpro_membership_card_user->user_registered ) ), $pmpro_membership_card_user );?></p>
+						<?php } ?>
+						<?php if(!empty($expiration_date)) { ?>
+							<p><strong><?php esc_html_e( 'Expires', 'pmpro-membership-card' ); ?>:</strong> <?php echo $expiration_date; ?></p>
 						<?php } ?>
 						<?php if(function_exists("pmpro_hasMembershipLevel")) { ?>
 							<p><strong><?php _e("Level", 'pmpro-membership-card');?>:</strong>
@@ -402,6 +417,9 @@
 						<?php if(!empty($since)) { ?>
 							<p><strong><?php esc_html_e( 'Member Since', 'pmpro-membership-card' ); ?>:</strong> <?php echo apply_filters('pmpro_membership_card_since_date', date_i18n( get_option("date_format"), strtotime( $pmpro_membership_card_user->user_registered ) ), $pmpro_membership_card_user );?></p>
 						<?php } ?>
+						<?php if(!empty($expiration_date)) { ?>
+							<p><strong><?php esc_html_e( 'Expires', 'pmpro-membership-card' ); ?>:</strong> <?php echo $expiration_date; ?></p>
+						<?php } ?>
 						<?php if(function_exists("pmpro_hasMembershipLevel")) { ?>
 							<p><strong><?php _e("Level", 'pmpro-membership-card');?>:</strong>
 							<?php
@@ -443,6 +461,9 @@
 						<?php if(!empty($since)) { ?>
 							<p><strong><?php esc_html_e( 'Member Since', 'pmpro-membership-card' ); ?>:</strong> <?php echo apply_filters('pmpro_membership_card_since_date', date_i18n( get_option("date_format"), strtotime( $pmpro_membership_card_user->user_registered ) ), $pmpro_membership_card_user );?></p>
 						<?php } ?>
+						<?php if(!empty($expiration_date)) { ?>
+							<p><strong><?php esc_html_e( 'Expires', 'pmpro-membership-card' ); ?>:</strong> <?php echo $expiration_date; ?></p>
+						<?php } ?>
 						<?php if(function_exists("pmpro_hasMembershipLevel")) { ?>
 							<p><strong><?php _e("Level", 'pmpro-membership-card');?>:</strong>
 							<?php
@@ -472,4 +493,5 @@
 			<?php } ?>
 		</div>
 	</nav>
+	
 </div> <!-- end #pmpro_membership_card -->
