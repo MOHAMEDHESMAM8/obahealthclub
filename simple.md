@@ -41,7 +41,7 @@ sequenceDiagram
     "degree": "qw",
     "licensed_states": "mm/dd/yyyy"
 }
-```
+``` 
 ## b. Patients  
 
 ```mermaid
