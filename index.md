@@ -1,9 +1,12 @@
 # OBA-MDCLARA System Integration
 
+%%{init: {'theme': 'dark', 'themeVariables': { 'darkMode': true }}}%%
+
 ## 1. SSO Concept
 ### a. Doctors
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 sequenceDiagram
     actor Doctor
     participant OBA as OBA (WordPress)
@@ -45,6 +48,7 @@ sequenceDiagram
 ## b. Patients  
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 sequenceDiagram
     actor Patient
     participant OBA as OBA (WordPress)
@@ -79,11 +83,15 @@ The medical experts page retrieves doctor information from the OBA (WordPress) s
 ### Doctor Profile Page:
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 graph TD
     subgraph "Doctor Profile Page"
         A[Doctor Information] -->|From OBA| B[Doctor Profile]
         C[Schedule] -->|From MDCLARA| B
     end
+    style A fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style B fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style C fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
 ```
 
 ## 2. Patients Integration
@@ -91,20 +99,31 @@ graph TD
 ### Patient Appointment Flow:
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 flowchart TD
     A[Patient] -->|View| B[Doctor Profile]
     B -->|Select| C[Available Time Slot]
     C -->|Reserve| D[Create Appointment]
     D -->|Store in| E[MDCLARA Database]
     E -->|Sync to| F[OBA My Account]
+    style A fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style B fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style C fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style D fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style E fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style F fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
 ```
 
 ### Patient profile:
 
 ```mermaid
+%%{init: {'theme': 'dark'}}%%
 graph TD
     subgraph "DATA"
         A[My Appointments] -->|From MDCLARA| E[Patient Profile]
         D[Patient Information] -->|From OBA| E[Patient Profile]
     end
+    style A fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style D fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
+    style E fill:#2A2A2A,stroke:#666,stroke-width:2px,color:#fff
 ```
