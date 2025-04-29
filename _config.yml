@@ -13,6 +13,12 @@ kramdown:
   input: GFM
   hard_wrap: false
 
+# Mermaid configuration
+mermaid:
+  theme: default
+  securityLevel: loose
+  startOnLoad: true
+
 # Exclude from processing
 exclude:
   - Gemfile

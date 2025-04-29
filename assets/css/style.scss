@@ -37,10 +37,27 @@
   padding: 1rem;
   border-radius: 4px;
   margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
 }
 
-// Dark mode Mermaid specific styles
+// Light mode Mermaid styles
+:root {
+  --mermaid-bg-color: #ffffff;
+  --mermaid-text-color: #333333;
+  --mermaid-line-color: #333333;
+}
+
+// Dark mode Mermaid styles
 @media (prefers-color-scheme: dark) {
+  :root {
+    --mermaid-bg-color: #2a2a2a;
+    --mermaid-text-color: #ffffff;
+    --mermaid-line-color: #ffffff;
+  }
+  
   .mermaid {
     --background-color: #2a2a2a;
   }
