@@ -11,6 +11,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -25,7 +27,7 @@ jobs:
       run: npm run build
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-files
         path: |
@@ -34,6 +36,7 @@ jobs:
           package.json
           package-lock.json
         retention-days: 5
+        compression-level: 9
 
   deploy:
     needs: build
@@ -41,7 +44,7 @@ jobs:
     
     steps:
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-files
         path: .
