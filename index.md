@@ -18,8 +18,8 @@ sequenceDiagram
     MDCLARA->>OBA: Return Reference ID & JWT
     OBA->>OBA: Store Reference ID
     OBA->>Doctor: Show MDCLARA Dashboard
-
 ```
+
 ### Doctor Data:
 
 ```json
@@ -56,8 +56,8 @@ sequenceDiagram
     MDCLARA->>OBA: Return Reference ID & JWT
     OBA->>OBA: Store Reference ID
     OBA->>Patient: Home
-
 ```
+
 ### Patient Data:
 
 ```json
@@ -73,14 +73,10 @@ sequenceDiagram
 }
 ```
 
-
-
-
 ## 2. Doctor:
 The medical experts page retrieves doctor information from the OBA (WordPress) system.
 
 ### Doctor Profile Page:
-
 
 ```mermaid
 graph TD
@@ -91,7 +87,6 @@ graph TD
 ```
 
 ## 2. Patients Integration
-
 
 ### Patient Appointment Flow:
 
