@@ -8,6 +8,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include the membership label functions
+require_once(plugin_dir_path(__FILE__) . 'membership-label.php');
+
 /**
  * Get user's age category based on date of birth
  */
@@ -222,7 +225,6 @@ function product_grid_shortcode($atts) {
             $price_data = get_pmpro_price_display($product->get_id());
             $is_member = !empty($price_data['membership_level']);
             $has_discount = $price_data['original_price'] != $price_data['member_price'];
-            $is_subscription = is_woo_subscription_product($product->get_id());
             
             // Get product tags and categories
             $product_tags = wp_get_post_terms($product->get_id(), 'product_tag', array('fields' => 'names'));
@@ -266,33 +268,58 @@ function product_grid_shortcode($atts) {
                         </a>
                     </h3>
                     <div class="price">
-                        <?php if ($has_discount) : ?>
-                            <span class="original-price"><del><?php echo format_price_with_subscription($price_data['original_price'], $product->get_id()); ?></del></span>
-                            <span class="member-price"><?php echo format_price_with_subscription($price_data['member_price'], $product->get_id()); ?></span>
-                            <?php if ($is_member) : ?>
-                                <span class="member-level-note"><?php echo sprintf(__('Your %s price', 'your-text-domain'), $price_data['membership_level']->name); ?></span>
+                        <?php if (!$is_member || $price_data['membership_level']->ID == 1) : ?>
+                            <?php if (!empty($price_data['member_price'])) : ?>
+                                <span class="price"><?php echo wc_price($price_data['original_price']); 
+                                if (is_woo_subscription_product($product->get_id())) {
+                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
+                                }
+                                ?></span>
+                            <?php else : ?>
+                                <span class="price"><?php echo wc_price($price_data['original_price']);
+                                if (is_woo_subscription_product($product->get_id())) {
+                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
+                                }
+                                ?></span>
                             <?php endif; ?>
                         <?php else : ?>
-                            <span class="regular-price"><?php echo format_price_with_subscription($price_data['original_price'], $product->get_id()); ?></span>
+                            <?php if (!empty($price_data['member_price'])) : ?>
+                                <span class="original-price"><del><?php echo wc_price($price_data['original_price']);
+                                if (is_woo_subscription_product($product->get_id())) {
+                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
+                                }
+                                ?></del></span>
+                                <span class="member-price"><?php echo wc_price($price_data['member_price']);
+                                if (is_woo_subscription_product($product->get_id())) {
+                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
+                                }
+                                ?></span>
+                            <?php else : ?>
+                                <span class="price"><?php echo wc_price($price_data['original_price']);
+                                if (is_woo_subscription_product($product->get_id())) {
+                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
+                                }
+                                ?></span>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                    
                     <div class="custom-add-to-cart">
-                            <a href="javascript:void(0);" 
-                               class="button" 
-                               data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
-                               data-quantity="1">
-                               <i class="default"></i>
-                                <span class="space"></span>
-                                <span>Add to cart</span>
-                            </a>
-                        </div>
-                        <div class="buy-now">
-                            <a href="<?php echo esc_url(wc_get_checkout_url() . '?buy-now=' . $product->get_id()); ?>" 
-                               class="button product_type_simple" 
-                               data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
-                               rel="nofollow">Buy now</a>
-                        </div>
+                        <a href="javascript:void(0);" 
+                           class="button" 
+                           data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
+                           data-quantity="1">
+                           <i class="default"></i>
+                            <span class="space"></span>
+                            <span>Add to cart</span>
+                        </a>
+                    </div>
+                    <div class="buy-now">
+                        <a href="<?php echo esc_url(wc_get_checkout_url() . '?buy-now=' . $product->get_id()); ?>" 
+                           class="button product_type_simple" 
+                           data-product_id="<?php echo esc_attr($product->get_id()); ?>" 
+                           rel="nofollow">Buy now</a>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -308,8 +335,6 @@ function product_grid_shortcode($atts) {
             var product_id = $thisButton.data('product_id');
             var quantity = $thisButton.data('quantity');
             
-            // Don't add loading class that hides the button
-            // Instead use a visual indicator that doesn't hide content
             $thisButton.addClass('is-loading');
             
             // AJAX add to cart
@@ -322,7 +347,6 @@ function product_grid_shortcode($atts) {
                     quantity: quantity
                 },
                 success: function(response) {
-                    // Remove loading class
                     $thisButton.removeClass('is-loading');
                     
                     if(response.error & response.product_url) {
@@ -330,17 +354,13 @@ function product_grid_shortcode($atts) {
                         return;
                     }
                     
-                    // Trigger event so cart widget updates
                     $(document.body).trigger('added_to_cart', [response.fragments, response.cart_hash, $thisButton]);
                     
-                    // Add the "added" class to the button for visual feedback
-                    // But don't change visibility or structure
                     $thisButton.addClass('added');
                     setTimeout(function() {
                         $thisButton.removeClass('added');
                     }, 1000);
                     
-                    // Show custom notification
                     showAddToCartNotification();
                 },
                 error: function() {
@@ -349,15 +369,12 @@ function product_grid_shortcode($atts) {
             });
         });
         
-        // Function to show notification
         function showAddToCartNotification() {
-            // Check if notification already exists
             var $existingNotification = $('#thegem-cart-notification');
             if ($existingNotification.length) {
                 $existingNotification.remove();
             }
             
-            // Create notification HTML
             var notificationHtml = `
                <div class="thegem-popup-notification-wrap" id="thegem-cart-notification">
                    <div class="thegem-popup-notification cart" data-timing="4000">
@@ -373,15 +390,12 @@ function product_grid_shortcode($atts) {
                </div>
             `;
             
-            // Append to body
             $('body').append(notificationHtml);
             
-            // Add active class with slight delay to trigger animation
             setTimeout(function() {
                 $('#thegem-cart-notification').addClass('active');
             }, 10);
             
-            // Remove after timeout
             setTimeout(function() {
                 $('#thegem-cart-notification').removeClass('active');
                 setTimeout(function() {
@@ -390,11 +404,9 @@ function product_grid_shortcode($atts) {
             }, 4000);
         }
         
-        // Remove "added_to_cart" event handlers that would change our button
         $(document.body).off('added_to_cart.custom_grid');
         $(document.body).on('added_to_cart.custom_grid', function(e, fragments, cart_hash, $button) {
             if ($button.hasClass('custom-add-to-cart')) {
-                // Prevent default WooCommerce behavior
                 e.stopImmediatePropagation();
             }
         });
@@ -668,10 +680,13 @@ function product_grid_styles() {
             margin: 10px 0;
             font-family: 'Source Sans Pro', sans-serif;
             font-style: normal;
-            font-weight: normal;
-            font-size: 18px;
-            line-height: 18px;
+            font-weight: 300;
+            font-size: 20px;
+            line-height: 20px;
             color: var(--thegem-to-product-grid-price-color, #FFF);
+        }
+        .price .member-price{
+            font-weight: 500;
         }
 
         .priority-badge {
@@ -776,7 +791,10 @@ function product_grid_styles() {
             display: inline-block;
             width: 5px;
         }
-
+    
+.product-item bdi {
+    color: #fff !important;
+}
         .custom-add-to-cart a span {
             display: inline-block;
             vertical-align: middle;

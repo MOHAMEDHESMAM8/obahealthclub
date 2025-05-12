@@ -1,4 +1,5 @@
 <?php 
+
 /**
  * Available variables coming from the shortcode atts
  * 
@@ -28,14 +29,43 @@
 		$show_avatar = true;
 	}
 
+	// QR Code logic
+	$qr_code_active = false;
+	// Only generate QR code if option is enabled
+	if( $qr_code === 'true' || $qr_code === '1' || $qr_code === true ) {
+		$qr_code_active = true;
+	}
+
 	// Get expiration date if available
 	$expiration_date = '';
 	if(isset($pmpro_membership_card_user->ID)) {
 		$membership_level = pmpro_getMembershipLevelForUser($pmpro_membership_card_user->ID);
 		$expiration_timestamp = $membership_level->enddate;
 		$expiration_date = date_i18n(get_option('date_format'), $expiration_timestamp);
-
 	}
+
+	
+	function qr_code_return_membership_info( $member, $option ) {
+		if ( $option == 'other' ) {
+			$membership_level = pmpro_getMembershipLevelForUser($member->ID);
+			$expiration_timestamp = $membership_level->enddate;
+			$expiration_date = date_i18n(get_option('date_format'), $expiration_timestamp);
+			
+			if ( isset( $member->membership_level ) ) {
+				$name = pmpro_membership_card_return_user_name( $member );
+				$membership_name = isset($member->membership_level->name) ? $member->membership_level->name : '';
+				$start_date = date_i18n(get_option('date_format'), strtotime($member->user_registered));
+				$email = $member->user_email;
+				return "Name: $name\nEmail: $email\nMembership: $membership_name\nStart Date: $start_date\nExpires: $expiration_date";
+			} else {
+				return "No membership";
+			}
+		}	
+	}
+	add_filter( 'pmpro_membership_card_qr_data_other', 'qr_code_return_membership_info', 10, 2 );
+
+
+
 ?>
 <style>
 	/* Hide any thumbnail that might be on the page. */
@@ -55,7 +85,6 @@
 		background-size: cover;
 		background-position: center;
 		color: #fff;
-
 		padding: 30px;
 	}
 	.pmpro_membership_card-print h1,
@@ -92,7 +121,8 @@
 		clear: both;
 	}
 	.pmpro_membership_card-inner .pmpro_membership_card-after p:last-of-type {
-		margin-bottom: 0;
+		margin: auto 0;
+		width: fit-content !important;
 	}
 	.pmpro-qr-code-active .pmpro_membership_card-after img {
 		height: 100px;
@@ -145,7 +175,14 @@
 		text-transform: capitalize;
 	}
 	.pmpro_membership_card-after {
-		display: none;
+		margin-top: 10px;
+		display: block;
+		text-align: center;
+	}
+	.pmpro_membership_card-after img {
+		border: 2px solid #000;
+		padding: 5px;
+		background: #fff;
 	}
 	.right-side-content {
 		flex: 1;
@@ -153,6 +190,10 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+	}
+	.qr-wrapper {
+		text-align: center;
+		margin-top: 10px;
 	}
 
 	/* Print Styles */
@@ -286,6 +327,18 @@
 
 	/* Responsive styles for tablet and mobile */
 	@media screen and (max-width: 768px) {
+		.pmpro_membership_card-inner {
+			flex-direction: column;
+			padding: 15px;
+		}
+		.pmpro_membership_card-data {
+			width: 100%;
+			margin-bottom: 20px;
+		}
+		.right-side-content {
+			width: 100%;
+			text-align: center;
+		}
 		.user-details {
 			flex-direction: column;
 			align-items: center;
@@ -293,24 +346,17 @@
 		}
 		.user-avatar {
 			margin-right: 0;
-			margin-bottom: 20px;
-		}
-		.pmpro_membership_card-inner {
-			flex-direction: column;
-		}
-		.pmpro_membership_card-data {
-			margin-bottom: 20px;
-			width: 100%;
-		}
-		.right-side-content {
-			width: 100%;
-		}
-		.card-site-logo {
-			margin-top: 10px;
+			margin-bottom: 15px;
 		}
 		.user-info h1 {
 			font-size: 1.5em;
 			margin-bottom: 10px;
+		}
+		.card-site-logo {
+			margin-top: 20px;
+		}
+		.pmpro_membership_card-after {
+			margin-top: 20px;
 		}
 	}
 
@@ -324,6 +370,9 @@
 
 	/* Mobile specific adjustments */
 	@media screen and (max-width: 480px) {
+		.pmpro_membership_card-inner {
+			padding: 10px;
+		}
 		.user-avatar {
 			width: 100px;
 			height: 100px;
@@ -334,16 +383,13 @@
 		.user-info p {
 			font-size: 0.9em;
 		}
-		.pmpro_membership_card-inner {
-			padding: 15px;
-		}
 	}
 </style>
 <div class="pmpro-card-actions" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
     <a class="pmpro_a-print" href="javascript:window.print()"><?php esc_html_e( 'Print', 'pmpro-membership-card' ); ?></a>
     <!-- ss <div class="wallet-button"><?php echo do_shortcode('[add_to_wallet]'); ?></div> -->
 </div>
-<div class="pmpro_membership_card">
+<div class="pmpro_membership_card <?php if($qr_code_active) echo 'pmpro-qr-code-active'; ?>">
 	<?php 
 		$featured_image = wp_get_attachment_url( get_post_thumbnail_id($post->ID) ); 
 		if(function_exists("pmpro_getMemberStartDate") && isset( $pmpro_membership_card_user->ID ) )
@@ -382,8 +428,14 @@
 							?>
 							</p>
 						<?php } ?>
+						<?php if($qr_code_active) { ?>
+							<div class="pmpro_membership_card-after">
+								<?php do_action( 'pmpro_membership_card_after_card', $pmpro_membership_card_user, $print_sizes, $qr_code, $qr_data ); ?>
+							</div>
+						<?php } ?>
 					</div>
 				</div>
+				
 			</div>
 			<div class="right-side-content">
 				<div class="card-site-logo">
@@ -427,8 +479,14 @@
 							?>
 							</p>
 						<?php } ?>
+						<?php if($qr_code_active) { ?>
+					<div class="pmpro_membership_card-after">
+						<?php do_action( 'pmpro_membership_card_after_card', $pmpro_membership_card_user, $print_sizes, $qr_code, $qr_data ); ?>
+					</div>
+				<?php } ?>
 					</div>
 				</div>
+				
 			</div>
 			<div class="right-side-content">
 				<div class="card-site-logo">
@@ -471,8 +529,14 @@
 							?>
 							</p>
 						<?php } ?>
+						<?php if($qr_code_active) { ?>
+							<div class="pmpro_membership_card-after">
+								<?php do_action( 'pmpro_membership_card_after_card', $pmpro_membership_card_user, $print_sizes, $qr_code, $qr_data ); ?>
+							</div>
+						<?php } ?>
 					</div>
 				</div>
+				
 			</div>
 			<div class="right-side-content">
 				<div class="card-site-logo">
@@ -495,3 +559,5 @@
 	</nav>
 	
 </div> <!-- end #pmpro_membership_card -->
+
+

@@ -65,17 +65,17 @@ function oba_display_level_options_before_cancel($current_user, $old_level_ids) 
                     $price_data = get_pmpro_price_display($product_id);
                 } else {
                     // Fallback if the function doesn't exist
-                    $original_price = get_post_meta($product_id, '_regular_price', true);
+                    $original_price = (float)get_post_meta($product_id, '_regular_price', true);
                     $price_data = array(
                         'original_price' => $original_price,
-                        'member_price' => $item->get_total() / $quantity,
+                        'member_price' => (float)($item->get_total() / $quantity),
                         'membership_level' => !empty($current_levels) ? $current_levels[0] : null
                     );
                 }
                 
                 // Calculate per-item savings
-                $item_original_total = $price_data['original_price'] * $quantity;
-                $item_member_total = $price_data['member_price'] * $quantity;
+                $item_original_total = (float)$price_data['original_price'] * (float)$quantity;
+                $item_member_total = (float)$price_data['member_price'] * (float)$quantity;
                 $item_savings = $item_original_total - $item_member_total;
                 
                 // Only add to the list if there were actual savings
@@ -151,11 +151,13 @@ function oba_display_level_options_before_cancel($current_user, $old_level_ids) 
             text-align: left;
             border-bottom: 2px solid #ddd;
             font-weight: 600;
+            color: #071938 !important;
         }
         
         .pmpro-recent-orders td {
             padding: 12px 15px;
             border-bottom: 1px solid #eee;
+            color: #071938 !important;
         }
         
         .pmpro-recent-orders tr:hover {
