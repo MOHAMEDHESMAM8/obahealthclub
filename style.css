@@ -17,3 +17,7 @@ License URI: license.txt
 .minicart .quantity {
     color: #000 !important;
 }
+
+.woocommerce-account .woocommerce-MyAccount-content p:first-child {
+    display: none;
+}
