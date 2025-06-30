@@ -14,9 +14,10 @@ function thegem_child_enqueue_styles() {
     wp_enqueue_style('child-style',
         get_stylesheet_directory_uri() . '/style.css',
         array('parent-style'),
-        '1.5'
+        '1.6.17'
     );
 }
+
 add_action('wp_enqueue_scripts', 'thegem_child_enqueue_styles');
 
 function child_theme_enqueue_usa_phone_field_script() {
@@ -57,6 +58,8 @@ require_once get_stylesheet_directory() . '/includes/signature-requirement.php';
 // Include restricted_roles.php
 require_once get_stylesheet_directory() . '/includes/restricted_roles.php';
 
+// Include display_name.php
+require_once get_stylesheet_directory() . '/includes/display_name.php';
 
 
 

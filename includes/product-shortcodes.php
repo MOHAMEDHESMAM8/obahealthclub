@@ -270,36 +270,16 @@ function product_grid_shortcode($atts) {
                     <div class="price">
                         <?php if (!$is_member || $price_data['membership_level']->ID == 1) : ?>
                             <?php if (!empty($price_data['member_price'])) : ?>
-                                <span class="price"><?php echo wc_price($price_data['original_price']); 
-                                if (is_woo_subscription_product($product->get_id())) {
-                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-                                }
-                                ?></span>
+                                <span class="price"><?php echo wc_price($price_data['original_price']); ?></span>
                             <?php else : ?>
-                                <span class="price"><?php echo wc_price($price_data['original_price']);
-                                if (is_woo_subscription_product($product->get_id())) {
-                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-                                }
-                                ?></span>
+                                <span class="price"><?php echo wc_price($price_data['original_price']); ?></span>
                             <?php endif; ?>
                         <?php else : ?>
                             <?php if (!empty($price_data['member_price'])) : ?>
-                                <span class="original-price"><del><?php echo wc_price($price_data['original_price']);
-                                if (is_woo_subscription_product($product->get_id())) {
-                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-                                }
-                                ?></del></span>
-                                <span class="member-price"><?php echo wc_price($price_data['member_price']);
-                                if (is_woo_subscription_product($product->get_id())) {
-                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-                                }
-                                ?></span>
+                                <span class="original-price"><del><?php echo wc_price($price_data['original_price']); ?></del></span>
+                                <span class="member-price"><?php echo wc_price($price_data['member_price']); ?></span>
                             <?php else : ?>
-                                <span class="price"><?php echo wc_price($price_data['original_price']);
-                                if (is_woo_subscription_product($product->get_id())) {
-                                    echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-                                }
-                                ?></span>
+                                <span class="price"><?php echo wc_price($price_data['original_price']); ?></span>
                             <?php endif; ?>
                         <?php endif; ?>
                     </div>

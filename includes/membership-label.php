@@ -33,9 +33,7 @@ function get_pmpro_price_display($product_id) {
     );
 }
 
-function is_woo_subscription_product($product_id) {
-    return get_post_meta($product_id, '_wps_sfw_product', true) == "yes";
-}
+
 
 // Split into two functions - one for list view and one for single product
 function display_pmpro_price_list() {
@@ -70,18 +68,10 @@ function display_pmpro_price_list_price() {
     
     // If user has level 2 or higher and a membership price exists
     if ($price_data['membership_level'] && $price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
-        echo '<span class="price-custom"><del>' . wc_price($price_data['original_price']) . '</del> ' . wc_price($price_data['member_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</span>';
+        echo '<span class="price-custom"><del>' . wc_price($price_data['original_price']) . '</del> ' . wc_price($price_data['member_price']) . '</span>';
     } else {
         // For non-members or products without membership pricing
-        echo '<span class="price-custom">' . wc_price($price_data['original_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</span>';
+        echo '<span class="price-custom">' . wc_price($price_data['original_price']) . '</span>';
     }
 }
 
@@ -97,20 +87,12 @@ function display_pmpro_price_single() {
     // If user has no membership or level 1
     if (!$price_data['membership_level'] || $price_data['membership_level']->ID == 1) {
         echo '<div class="price-section">';
-        echo '<span class="price">' . wc_price($price_data['original_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo ' / ' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</span>';
+        echo '<span class="price">' . wc_price($price_data['original_price']) . '</span>';
         echo '</div>';
         
         if (!empty($price_data['member_price'])) {
             echo '<div class="membership-notice">';
-            echo '<p>Get this product for ' . wc_price($price_data['member_price']);
-            if (is_woo_subscription_product($product->get_id())) {
-                echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-            }
-            echo ' with a paid membership!</p>';
+            echo '<p>Get this product for ' . wc_price($price_data['member_price']) . ' with a paid membership!</p>';
             echo '<a href="https://obahealthclub.com/membership-levels/" class="button membership-button" target="_blank">Get Membership</a>';
             echo '</div>';
         }
@@ -119,26 +101,14 @@ function display_pmpro_price_single() {
     else if ($price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
         // Only show the crossed-out price and member price if a membership price exists
         echo '<div class="price-section">';
-        echo '<span class="original-price"><del>' . wc_price($price_data['original_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</del></span>';
-        echo '<span class="member-price">' . wc_price($price_data['member_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</span>';
+        echo '<span class="original-price"><del>' . wc_price($price_data['original_price']) . '</del></span>';
+        echo '<span class="member-price">' . wc_price($price_data['member_price']) . '</span>';
         echo '</div>';
         echo '<p class="membership-discount">Member Exclusive! 🌟 Enjoy your special member pricing.</p>';
     } else {
         // If no membership price is set, just show the regular price
         echo '<div class="price-section">';
-        echo '<span class="price">' . wc_price($price_data['original_price']);
-        if (is_woo_subscription_product($product->get_id())) {
-            echo '/' . get_post_meta($product->get_id(), 'wps_sfw_subscription_interval', true);
-        }
-        echo '</span>';
+        echo '<span class="price">' . wc_price($price_data['original_price']) . '</span>';
         echo '</div>';
     }
     
@@ -441,10 +411,6 @@ function add_membership_notice_after_price($price_html, $cart_item, $cart_item_k
         // If there's a membership price available
         if (!empty($membership_price)) {
             $formatted_price = wc_price($membership_price);
-            if (is_woo_subscription_product($product_id)) {
-                $interval = get_post_meta($product_id, 'wps_sfw_subscription_interval', true);
-                $formatted_price .= '/' . $interval;
-            }
             
             $price_html .= '<div class="membership-cart-notice"><span>' . $formatted_price . ' with <a href="https://obahealthclub.com/membership-levels/" target="_blank">paid membership</a></span></div>';
         }

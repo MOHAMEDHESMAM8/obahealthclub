@@ -11,13 +11,108 @@ License: GNU General Public License
 License URI: license.txt
 */
 .minicart .total {
-    color: #000 !important;
+  color: #000 !important;
 }
 
 .minicart .quantity {
-    color: #000 !important;
+  color: #000 !important;
 }
 
 .woocommerce-account .woocommerce-MyAccount-content p:first-child {
-    display: none;
+  display: none;
+}
+.product-page__wrapper form.cart:not(.variations_form) {
+  display: block !important;
+}
+.wcsatt-options-prompt-radios {
+  padding: 0 !important;
+}
+.wcsatt-options-prompt-label {
+  color: #fff !important;
+}
+.wcsatt-options-product-dropdown {
+  color: #000 !important;
+  padding: 8px;
+  border-radius: 4px;
+}   
+.dokan-vendor-register label{
+    color: #fff !important;
+}
+.dokan-vendor-register input{
+    color: #000 !important;
+}
+.dokan-vendor-register select{
+    color: #000 !important;
+}
+.dokan-vendor-register textarea{
+    color: #000 !important;
+}
+.dokan-product-edit-form label{
+    color: #fff !important;
+}
+.dokan-product-edit-form input{
+    color: #000 !important;
+}
+.dokan-product-edit-form select{
+    color: #000 !important;
+}
+.dokan-product-edit-form .regular-price input{
+    padding: 6px !important;
+}
+.dokan-product-edit-form .sale-price input{
+    padding: 6px !important;
+}
+
+.dokan-section-heading h2{
+    color: #000 !important;
+}
+.dokan-dashboard .dokan-section-content label{
+    color: #000 !important;
+}
+.dokan-product-inventory.dokan-edit-row {
+    color: #000 !important;
+}
+.dokan-attribute-option-list *{
+    color: #000 !important;
+}
+.dokan-table tbody td{
+  color: #000 !important;
+}
+.dokan-table.product-listing-table tbody td{
+  color: #fff !important;
+}
+.dokan-dashboard-wrap .dokan-panel-body {
+  color: #000 !important;
+}
+.dokan-dashboard-layout .dokan-layout .text-base{
+  color: #000 !important;
+}
+.dokan-settings-area label{
+  color: #fff !important;
+}
+.dokan-settings-area input{
+  color: #000 !important;
+}
+.dokan-settings-area select{
+  color: #000 !important;
+}
+.dokan-settings-area textarea{
+  color: #000 !important;
+}
+
+ul.subsubsub li.active a {
+  color: #fff !important;
+}
+ul.subsubsub li a:hover  {
+  color: #fff !important;
+} 
+#dokan_comments-form * {
+  color: #000 !important;
+}
+#dokan_comments-form #dokan-comments-table thead th{
+  color: #fff !important;
+
+}
+#dokan-order-status-form select{
+  color: #000 !important;
 }
