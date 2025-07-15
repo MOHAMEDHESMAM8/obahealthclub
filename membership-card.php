@@ -47,19 +47,8 @@
 	
 	function qr_code_return_membership_info( $member, $option ) {
 		if ( $option == 'other' ) {
-			$membership_level = pmpro_getMembershipLevelForUser($member->ID);
-			$expiration_timestamp = $membership_level->enddate;
-			$expiration_date = date_i18n(get_option('date_format'), $expiration_timestamp);
-			
-			if ( isset( $member->membership_level ) ) {
-				$name = pmpro_membership_card_return_user_name( $member );
-				$membership_name = isset($member->membership_level->name) ? $member->membership_level->name : '';
-				$start_date = date_i18n(get_option('date_format'), strtotime($member->user_registered));
-				$email = $member->user_email;
-				return "Name: $name\nEmail: $email\nMembership: $membership_name\nStart Date: $start_date\nExpires: $expiration_date";
-			} else {
-				return "No membership";
-			}
+			// Return the home URL for QR code
+			return home_url();
 		}	
 	}
 	add_filter( 'pmpro_membership_card_qr_data_other', 'qr_code_return_membership_info', 10, 2 );
