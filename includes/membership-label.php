@@ -10,9 +10,24 @@ if (!defined('ABSPATH')) {
 
 // Function to get the price display data
 function get_pmpro_price_display($product_id) {
-    // Get the original price of the product
-    $original_price = get_post_meta($product_id, '_regular_price', true);
+    $product = wc_get_product($product_id);
     $membership_price = get_post_meta($product_id, '_membership_price', true);
+    
+    // Get the original price based on product type
+    if ($product && $product->is_type('variable')) {
+        // For variable products, get min and max prices
+        $min_price = $product->get_variation_price('min');
+        $max_price = $product->get_variation_price('max');
+        
+        if ($min_price == $max_price) {
+            $original_price = $min_price;
+        } else {
+            $original_price = $min_price . ' - ' . $max_price;
+        }
+    } else {
+        // For simple products, get regular price
+        $original_price = $product ? $product->get_regular_price() : get_post_meta($product_id, '_regular_price', true);
+    }
     
     // Check if user is logged in with membership
     if (is_user_logged_in()) {
@@ -22,14 +37,16 @@ function get_pmpro_price_display($product_id) {
         return array(
             'original_price' => $original_price,
             'member_price' => $membership_price,
-            'membership_level' => $membership_level
+            'membership_level' => $membership_level,
+            'is_variable' => $product && $product->is_type('variable')
         );
     }
     
     return array(
         'original_price' => $original_price,
         'member_price' => $membership_price,
-        'membership_level' => null
+        'membership_level' => null,
+        'is_variable' => $product && $product->is_type('variable')
     );
 }
 
@@ -66,12 +83,26 @@ function display_pmpro_price_list_price() {
     
     $price_data = get_pmpro_price_display($product->get_id());
     
+    // Format price display for variable products
+    if ($price_data['is_variable']) {
+        $formatted_original_price = $price_data['original_price'];
+        if (strpos($formatted_original_price, ' - ') !== false) {
+            // Range format: "min - max"
+            $prices = explode(' - ', $formatted_original_price);
+            $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
+        } else {
+            $formatted_original_price = wc_price($formatted_original_price);
+        }
+    } else {
+        $formatted_original_price = wc_price($price_data['original_price']);
+    }
+    
     // If user has level 2 or higher and a membership price exists
     if ($price_data['membership_level'] && $price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
-        echo '<span class="price-custom"><del>' . wc_price($price_data['original_price']) . '</del> ' . wc_price($price_data['member_price']) . '</span>';
+        echo '<span class="price-custom"><del>' . $formatted_original_price . '</del> ' . wc_price($price_data['member_price']) . '</span>';
     } else {
         // For non-members or products without membership pricing
-        echo '<span class="price-custom">' . wc_price($price_data['original_price']) . '</span>';
+        echo '<span class="price-custom">' . $formatted_original_price . '</span>';
     }
 }
 
@@ -82,12 +113,26 @@ function display_pmpro_price_single() {
     
     $price_data = get_pmpro_price_display($product->get_id());
     
+    // Format price display for variable products
+    if ($price_data['is_variable']) {
+        $formatted_original_price = $price_data['original_price'];
+        if (strpos($formatted_original_price, ' - ') !== false) {
+            // Range format: "min - max"
+            $prices = explode(' - ', $formatted_original_price);
+            $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
+        } else {
+            $formatted_original_price = wc_price($formatted_original_price);
+        }
+    } else {
+        $formatted_original_price = wc_price($price_data['original_price']);
+    }
+    
     echo '<div class="pmpro-price-display">';
     
     // If user has no membership or level 1
     if (!$price_data['membership_level'] || $price_data['membership_level']->ID == 1) {
         echo '<div class="price-section">';
-        echo '<span class="price">' . wc_price($price_data['original_price']) . '</span>';
+        echo '<span class="price">' . $formatted_original_price . '</span>';
         echo '</div>';
         
         if (!empty($price_data['member_price'])) {
@@ -101,14 +146,14 @@ function display_pmpro_price_single() {
     else if ($price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
         // Only show the crossed-out price and member price if a membership price exists
         echo '<div class="price-section">';
-        echo '<span class="original-price"><del>' . wc_price($price_data['original_price']) . '</del></span>';
+        echo '<span class="original-price"><del>' . $formatted_original_price . '</del></span>';
         echo '<span class="member-price">' . wc_price($price_data['member_price']) . '</span>';
         echo '</div>';
         echo '<p class="membership-discount">Member Exclusive! 🌟 Enjoy your special member pricing.</p>';
     } else {
         // If no membership price is set, just show the regular price
         echo '<div class="price-section">';
-        echo '<span class="price">' . wc_price($price_data['original_price']) . '</span>';
+        echo '<span class="price">' . $formatted_original_price . '</span>';
         echo '</div>';
     }
     
@@ -135,6 +180,14 @@ function add_membership_price_field() {
 // Save membership price
 function save_membership_price_field($post_id) {
     $membership_price = isset($_POST['_membership_price']) ? $_POST['_membership_price'] : '';
+    
+    // Check if this is a variable product
+    $product = wc_get_product($post_id);
+    if ($product && $product->is_type('variable')) {
+        // For variable products, get the _level_2_price and save it as _membership_price
+        $level_2_price = get_post_meta($post_id, '_level_2_price', true);
+        $membership_price = $level_2_price;
+    }
     
     // Save even if empty (to allow clearing the field)
     update_post_meta($post_id, '_membership_price', esc_attr($membership_price));
