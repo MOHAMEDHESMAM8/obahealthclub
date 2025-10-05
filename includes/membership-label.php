@@ -92,7 +92,7 @@ function display_pmpro_price_single() {
         
         if (!empty($price_data['member_price'])) {
             echo '<div class="membership-notice">';
-            echo '<p>Get this product for ' . wc_price($price_data['member_price']) . ' with a paid membership!</p>';
+            echo '<p>Get this product for ' . wc_price($price_data['member_price']) . ' with a paid membership! (Our partner pharmacy pre-negotiated price)</p>';
             echo '<a href="https://obahealthclub.com/membership-levels/" class="button membership-button" target="_blank">Get Membership</a>';
             echo '</div>';
         }
@@ -139,9 +139,9 @@ function save_membership_price_field($post_id) {
     // Save even if empty (to allow clearing the field)
     update_post_meta($post_id, '_membership_price', esc_attr($membership_price));
     
-    // Set this price for all membership levels (2, 3, 4)
+    // Set this price for all membership levels (2, 3, 4, 5, 6)
     if (!empty($membership_price)) {
-        for ($level = 2; $level <= 4; $level++) {
+        for ($level = 2; $level <= 6; $level++) {
             update_post_meta($post_id, '_level_' . $level . '_price', $membership_price);
         }
     }
@@ -260,45 +260,112 @@ function pmpro_price_display_css() {
     <?php
 }
 
-// Add membership price to CSV export
-function add_membership_price_to_export($columns) {
-    $columns['membership_price'] = 'Membership Price';
+// ✅ Add custom fields to CSV export columns
+function add_custom_fields_to_export_columns($columns) {
+    $columns['membership_price']   = 'Membership Price';
+    $columns['usa_only_product']   = 'USA Only Product';
+    $columns['extra_cost']         = 'Extra Cost';
+    $columns['extra_cost_label']   = 'Extra Cost Label';
+    $columns['extra_cost_taxable'] = 'Extra Cost Taxable';
     return $columns;
 }
 
-// Add membership price data to CSV export
-function add_membership_price_data_to_export($export_data, $product, $column_id) {
-    if ($column_id === 'membership_price') {
-        $membership_price = get_post_meta($product->get_id(), '_membership_price', true);
-        $export_data = !empty($membership_price) ? $membership_price : '';
-    }
-    return $export_data;
+// Export: Membership Price
+function export_membership_price($value, $product) {
+    return get_post_meta($product->get_id(), '_membership_price', true);
 }
+add_filter('woocommerce_product_export_product_column_membership_price', 'export_membership_price', 10, 2);
 
-// Process the imported membership price data
-function process_imported_membership_price($product, $data) {
+// Export: USA Only Product
+function export_usa_only_product($value, $product) {
+    $val = get_post_meta($product->get_id(), '_usa_only_product', true);
+    return $val === 'yes' || $val == 1 ? 'yes' : 'no';
+}
+add_filter('woocommerce_product_export_product_column_usa_only_product', 'export_usa_only_product', 10, 2);
+
+// Export: Extra Cost
+function export_extra_cost($value, $product) {
+    return get_post_meta($product->get_id(), '_extra_cost', true);
+}
+add_filter('woocommerce_product_export_product_column_extra_cost', 'export_extra_cost', 10, 2);
+
+// Export: Extra Cost Label
+function export_extra_cost_label($value, $product) {
+    return get_post_meta($product->get_id(), '_extra_cost_label', true);
+}
+add_filter('woocommerce_product_export_product_column_extra_cost_label', 'export_extra_cost_label', 10, 2);
+
+// Export: Extra Cost Taxable
+function export_extra_cost_taxable($value, $product) {
+    $val = get_post_meta($product->get_id(), '_extra_cost_taxable', true);
+    return $val === 'yes' || $val == 1 ? 'yes' : 'no';
+}
+add_filter('woocommerce_product_export_product_column_extra_cost_taxable', 'export_extra_cost_taxable', 10, 2);
+
+
+// ✅ Process imported data (save to meta)
+function process_imported_custom_fields($product, $data) {
+    // Membership price
     if (isset($data['membership_price'])) {
         $membership_price = $data['membership_price'];
-        
-        // Save the membership price
         $product->update_meta_data('_membership_price', $membership_price);
-        
-        // Set this price for all membership levels (2, 3, 4)
+
+        // Also set for levels 2,3,4
         if (!empty($membership_price)) {
             for ($level = 2; $level <= 4; $level++) {
                 $product->update_meta_data('_level_' . $level . '_price', $membership_price);
             }
         }
     }
-    
+
+    // USA Only Product
+    if (isset($data['usa_only_product'])) {
+        $product->update_meta_data('_usa_only_product', $data['usa_only_product']);
+    }
+
+    // Extra Cost
+    if (isset($data['extra_cost'])) {
+        $product->update_meta_data('_extra_cost', $data['extra_cost']);
+    }
+
+    // Extra Cost Label
+    if (isset($data['extra_cost_label'])) {
+        $product->update_meta_data('_extra_cost_label', $data['extra_cost_label']);
+    }
+
+    // Extra Cost Taxable
+    if (isset($data['extra_cost_taxable'])) {
+        $product->update_meta_data('_extra_cost_taxable', $data['extra_cost_taxable']);
+    }
+
     return $product;
 }
 
-// Map membership price column headers from CSV import
-function map_membership_price_csv_columns($columns) {
-    $columns['membership_price'] = 'Membership Price';
+// ✅ Map CSV headers to custom fields
+function map_custom_fields_csv_columns($columns) {
+    $columns['membership_price']   = 'Membership Price';
+    $columns['usa_only_product']   = 'USA Only Product';
+    $columns['extra_cost']         = 'Extra Cost';
+    $columns['extra_cost_label']   = 'Extra Cost Label';
+    $columns['extra_cost_taxable'] = 'Extra Cost Taxable';
     return $columns;
 }
+
+// Add CSV export/import hooks
+// ✅ CSV Export: add new columns
+add_filter('woocommerce_product_export_column_names', 'add_custom_fields_to_export_columns');
+add_filter('woocommerce_product_export_product_default_columns', 'add_custom_fields_to_export_columns');
+
+// ✅ CSV Export: populate data for custom columns
+add_filter('woocommerce_product_export_product_column', 'add_custom_fields_to_export_data', 10, 3);
+
+// ✅ CSV Import: process incoming data before saving product
+add_filter('woocommerce_product_import_pre_insert_product_object', 'process_imported_custom_fields', 10, 2);
+
+// ✅ CSV Import: map custom column headers
+add_filter('woocommerce_csv_product_import_mapping_options', 'map_custom_fields_csv_columns');
+add_filter('woocommerce_csv_product_import_mapping_default_columns', 'map_custom_fields_csv_columns');
+
 
 // Hook functions - Update to use different functions for list and single product
 remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_price', 10);
@@ -312,14 +379,6 @@ add_action('wp_head', 'pmpro_price_display_css');
 // Add membership price field to product data tabs
 add_action('woocommerce_product_options_pricing', 'add_membership_price_field');
 add_action('woocommerce_process_product_meta', 'save_membership_price_field');
-
-// Add CSV export/import hooks
-add_filter('woocommerce_product_export_column_names', 'add_membership_price_to_export');
-add_filter('woocommerce_product_export_product_default_columns', 'add_membership_price_to_export');
-add_filter('woocommerce_product_export_product_column_membership_price', 'add_membership_price_data_to_export', 10, 3);
-add_filter('woocommerce_product_import_pre_insert_product_object', 'process_imported_membership_price', 10, 2);
-add_filter('woocommerce_csv_product_import_mapping_options', 'map_membership_price_csv_columns');
-add_filter('woocommerce_csv_product_import_mapping_default_columns', 'map_membership_price_csv_columns');
 
 // Function to apply membership pricing in cart
 function apply_membership_pricing_to_cart($cart_object) {
@@ -374,8 +433,12 @@ function display_original_price_in_cart_subtotal($price, $cart_item, $cart_item_
             $original_price = $cart_item['original_price'];
             
             $quantity = $cart_item['quantity'];
+
+            $original_price = (float) $cart_item['original_price'];
+            $quantity       = (int) $cart_item['quantity'];
+
             $original_price_formatted = wc_price($original_price * $quantity);
-            
+
             $return_price = '<span class="cart-original-price"><del>' . $original_price_formatted . '</del></span> ' . $price;
             return $return_price . '<br><span class="member-discount-note">Member Discount Applied</span>';
         }

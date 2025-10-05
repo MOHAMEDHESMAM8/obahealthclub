@@ -393,7 +393,7 @@
 					<div class="user-avatar">
 						<?php
 							if (!empty( $pmpro_membership_card_user->ID ) ) {
-								echo get_avatar( $pmpro_membership_card_user->ID, 150, 'wavatar', pmpro_membership_card_return_user_name( $pmpro_membership_card_user ) . ' avatar' );
+								//echo get_avatar( $pmpro_membership_card_user->ID, 150, 'wavatar', pmpro_membership_card_return_user_name( $pmpro_membership_card_user ) . ' avatar' );
 							}
 						?>
 					</div>
@@ -443,8 +443,13 @@
 					<div class="user-avatar">
 						<?php
 							if (!empty( $pmpro_membership_card_user->ID ) ) {
-								echo get_avatar( $pmpro_membership_card_user->ID, 150, 'wavatar', pmpro_membership_card_return_user_name( $pmpro_membership_card_user ) . ' avatar' );
-							}
+                                echo get_avatar(
+                                        $pmpro_membership_card_user->ID,
+                                        150,
+                                        'mystery',
+                                        pmpro_membership_card_return_user_name($pmpro_membership_card_user) . ' avatar'
+                                );
+                            }
 						?>
 					</div>
 					<div class="user-info">
@@ -494,7 +499,7 @@
 					<div class="user-avatar">
 						<?php
 							if (!empty( $pmpro_membership_card_user->ID ) ) {
-								echo get_avatar( $pmpro_membership_card_user->ID, 150, 'wavatar', pmpro_membership_card_return_user_name( $pmpro_membership_card_user ) . ' avatar' );
+								//echo get_avatar( $pmpro_membership_card_user->ID, 150, 'wavatar', pmpro_membership_card_return_user_name( $pmpro_membership_card_user ) . ' avatar' );
 							}
 						?>
 					</div>
