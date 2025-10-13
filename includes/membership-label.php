@@ -8,10 +8,11 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-// Function to get the price display data
+// Function to get the price display data (handles both simple and variable products)
 function get_pmpro_price_display($product_id) {
     $product = wc_get_product($product_id);
-    $membership_price = get_post_meta($product_id, '_membership_price', true);
+    $membership_price = '';
+    $has_member_pricing = false;
     
     // Get the original price based on product type
     if ($product && $product->is_type('variable')) {
@@ -24,9 +25,40 @@ function get_pmpro_price_display($product_id) {
         } else {
             $original_price = $min_price . ' - ' . $max_price;
         }
+        
+        // Check if any variation has membership pricing
+        $variations = $product->get_available_variations();
+        $min_member_price = null;
+        $max_member_price = null;
+        
+        foreach ($variations as $variation) {
+            $var_id = $variation['variation_id'];
+            $var_member_price = get_post_meta($var_id, '_variation_membership_price', true);
+            
+            if (!empty($var_member_price) && $var_member_price > 0) {
+                $has_member_pricing = true;
+                if ($min_member_price === null || $var_member_price < $min_member_price) {
+                    $min_member_price = $var_member_price;
+                }
+                if ($max_member_price === null || $var_member_price > $max_member_price) {
+                    $max_member_price = $var_member_price;
+                }
+            }
+        }
+        
+        // Set membership price range
+        if ($has_member_pricing) {
+            if ($min_member_price == $max_member_price) {
+                $membership_price = $min_member_price;
+            } else {
+                $membership_price = $min_member_price . ' - ' . $max_member_price;
+            }
+        }
     } else {
         // For simple products, get regular price
         $original_price = $product ? $product->get_regular_price() : get_post_meta($product_id, '_regular_price', true);
+        $membership_price = get_post_meta($product_id, '_membership_price', true);
+        $has_member_pricing = !empty($membership_price) && $membership_price > 0;
     }
     
     // Check if user is logged in with membership
@@ -38,7 +70,8 @@ function get_pmpro_price_display($product_id) {
             'original_price' => $original_price,
             'member_price' => $membership_price,
             'membership_level' => $membership_level,
-            'is_variable' => $product && $product->is_type('variable')
+            'is_variable' => $product && $product->is_type('variable'),
+            'has_member_pricing' => $has_member_pricing
         );
     }
     
@@ -46,7 +79,8 @@ function get_pmpro_price_display($product_id) {
         'original_price' => $original_price,
         'member_price' => $membership_price,
         'membership_level' => null,
-        'is_variable' => $product && $product->is_type('variable')
+        'is_variable' => $product && $product->is_type('variable'),
+        'has_member_pricing' => $has_member_pricing
     );
 }
 
@@ -60,16 +94,32 @@ function display_pmpro_price_list() {
     
     $price_data = get_pmpro_price_display($product->get_id());
     
-    // If membership price exists, show the appropriate display
-    if (!empty($price_data['member_price'])) {
-        // If user has no membership or level 1
-        if (!$price_data['membership_level'] || $price_data['membership_level']->ID == 1) {
+    // Only show if product has member pricing
+    if ($price_data['has_member_pricing']) {
+        // Define discount levels
+        $discount_levels = array(2, 3, 5, 6);
+        
+        // If user has no membership or level 1 or 4 (no discount)
+        if (!$price_data['membership_level'] || 
+            $price_data['membership_level']->ID == 1 || 
+            $price_data['membership_level']->ID == 4) {
+            
             echo '<div class="membership-label-list non-member">';
-            echo '<a href="https://obahealthclub.com/membership-levels/">Membership: ' . wc_price($price_data['member_price']) . '</a>';
+            
+            // Format the member price display
+            $member_price_display = $price_data['member_price'];
+            if (strpos($member_price_display, ' - ') !== false) {
+                $prices = explode(' - ', $member_price_display);
+                $member_price_display = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
+            } else {
+                $member_price_display = wc_price($member_price_display);
+            }
+            
+            echo '<a href="https://obahealthclub.com/membership-levels/">Membership: ' . $member_price_display . '</a>';
             echo '</div>';
         }
-        // If user has level 2 or higher
-        else if ($price_data['membership_level']->ID >= 2) {
+        // If user has level 2, 3, 5, or 6 (has discount)
+        else if (in_array($price_data['membership_level']->ID, $discount_levels)) {
             echo '<div class="membership-label-list member">Membership Price</div>';
         }
     }
@@ -82,26 +132,36 @@ function display_pmpro_price_list_price() {
     if (!$product) return;
     
     $price_data = get_pmpro_price_display($product->get_id());
+    $discount_levels = array(2, 3, 5, 6);
     
-    // Format price display for variable products
-    if ($price_data['is_variable']) {
-        $formatted_original_price = $price_data['original_price'];
-        if (strpos($formatted_original_price, ' - ') !== false) {
-            // Range format: "min - max"
-            $prices = explode(' - ', $formatted_original_price);
-            $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
-        } else {
-            $formatted_original_price = wc_price($formatted_original_price);
-        }
+    // Format original price display
+    $formatted_original_price = $price_data['original_price'];
+    if (strpos($formatted_original_price, ' - ') !== false) {
+        // Range format: "min - max"
+        $prices = explode(' - ', $formatted_original_price);
+        $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
     } else {
-        $formatted_original_price = wc_price($price_data['original_price']);
+        $formatted_original_price = wc_price($formatted_original_price);
     }
     
-    // If user has level 2 or higher and a membership price exists
-    if ($price_data['membership_level'] && $price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
-        echo '<span class="price-custom"><del>' . $formatted_original_price . '</del> ' . wc_price($price_data['member_price']) . '</span>';
+    // Format member price display
+    $formatted_member_price = '';
+    if (!empty($price_data['member_price'])) {
+        if (strpos($price_data['member_price'], ' - ') !== false) {
+            $prices = explode(' - ', $price_data['member_price']);
+            $formatted_member_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
+        } else {
+            $formatted_member_price = wc_price($price_data['member_price']);
+        }
+    }
+    
+    // Show discounted price only for levels 2, 3, 5, 6
+    if ($price_data['membership_level'] && 
+        in_array($price_data['membership_level']->ID, $discount_levels) && 
+        !empty($price_data['member_price'])) {
+        echo '<span class="price-custom"><del>' . $formatted_original_price . '</del> ' . $formatted_member_price . '</span>';
     } else {
-        // For non-members or products without membership pricing
+        // For non-members, level 1, level 4, or products without membership pricing
         echo '<span class="price-custom">' . $formatted_original_price . '</span>';
     }
 }
@@ -112,42 +172,52 @@ function display_pmpro_price_single() {
     if (!$product) return;
     
     $price_data = get_pmpro_price_display($product->get_id());
+    $discount_levels = array(2, 3, 5, 6);
     
-    // Format price display for variable products
-    if ($price_data['is_variable']) {
-        $formatted_original_price = $price_data['original_price'];
-        if (strpos($formatted_original_price, ' - ') !== false) {
-            // Range format: "min - max"
-            $prices = explode(' - ', $formatted_original_price);
-            $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
-        } else {
-            $formatted_original_price = wc_price($formatted_original_price);
-        }
+    // Format original price display
+    $formatted_original_price = $price_data['original_price'];
+    if (strpos($formatted_original_price, ' - ') !== false) {
+        $prices = explode(' - ', $formatted_original_price);
+        $formatted_original_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
     } else {
-        $formatted_original_price = wc_price($price_data['original_price']);
+        $formatted_original_price = wc_price($formatted_original_price);
+    }
+    
+    // Format member price display
+    $formatted_member_price = '';
+    if (!empty($price_data['member_price'])) {
+        if (strpos($price_data['member_price'], ' - ') !== false) {
+            $prices = explode(' - ', $price_data['member_price']);
+            $formatted_member_price = wc_price($prices[0]) . ' - ' . wc_price($prices[1]);
+        } else {
+            $formatted_member_price = wc_price($price_data['member_price']);
+        }
     }
     
     echo '<div class="pmpro-price-display">';
     
-    // If user has no membership or level 1
-    if (!$price_data['membership_level'] || $price_data['membership_level']->ID == 1) {
+    // If user has no membership, level 1, or level 4 (no discount)
+    if (!$price_data['membership_level'] || 
+        $price_data['membership_level']->ID == 1 || 
+        $price_data['membership_level']->ID == 4) {
+        
         echo '<div class="price-section">';
         echo '<span class="price">' . $formatted_original_price . '</span>';
         echo '</div>';
         
-        if (!empty($price_data['member_price'])) {
+        if ($price_data['has_member_pricing']) {
             echo '<div class="membership-notice">';
-            echo '<p>Get this product for ' . wc_price($price_data['member_price']) . ' with a paid membership! (Our partner pharmacy pre-negotiated price)</p>';
+            echo '<p>Get this product for ' . $formatted_member_price . ' with a paid membership! (Our partner pharmacy pre-negotiated price)</p>';
             echo '<a href="https://obahealthclub.com/membership-levels/" class="button membership-button" target="_blank">Get Membership</a>';
             echo '</div>';
         }
     } 
-    // If user has level 2 or higher
-    else if ($price_data['membership_level']->ID >= 2 && !empty($price_data['member_price'])) {
+    // If user has level 2, 3, 5, or 6 (has discount)
+    else if (in_array($price_data['membership_level']->ID, $discount_levels) && $price_data['has_member_pricing']) {
         // Only show the crossed-out price and member price if a membership price exists
         echo '<div class="price-section">';
         echo '<span class="original-price"><del>' . $formatted_original_price . '</del></span>';
-        echo '<span class="member-price">' . wc_price($price_data['member_price']) . '</span>';
+        echo '<span class="member-price">' . $formatted_member_price . '</span>';
         echo '</div>';
         echo '<p class="membership-discount">Member Exclusive! 🌟 Enjoy your special member pricing.</p>';
     } else {
@@ -160,44 +230,151 @@ function display_pmpro_price_single() {
     echo '</div>';
 }
 
-// Add membership price field to product
+// Add membership price field to simple product
 function add_membership_price_field() {
+    global $post;
+    $product = wc_get_product($post->ID);
+    
+    // Only show for simple products (variable products use variation fields)
+    if ($product && !$product->is_type('variable')) {
+        woocommerce_wp_text_input(
+            array(
+                'id' => '_membership_price',
+                'label' => __('Membership Price', 'woocommerce'),
+                'description' => __('Price for paid members (levels 2, 3, 5, 6). Leave empty for no discount.', 'woocommerce'),
+                'desc_tip' => true,
+                'type' => 'number',
+                'custom_attributes' => array(
+                    'step' => 'any',
+                    'min' => '0'
+                )
+            )
+        );
+    }
+}
+
+// Add membership price field to each variation
+function add_variation_membership_price_field($loop, $variation_data, $variation) {
+    $membership_price = get_post_meta($variation->ID, '_variation_membership_price', true);
+    
     woocommerce_wp_text_input(
         array(
-            'id' => '_membership_price',
+            'id' => '_variation_membership_price[' . $loop . ']',
+            'name' => '_variation_membership_price[' . $loop . ']',
+            'value' => $membership_price,
             'label' => __('Membership Price', 'woocommerce'),
-            'description' => __('Price for paid members (levels 2, 3, 4)', 'woocommerce'),
+            'description' => __('Price for members (levels 2, 3, 5, 6). Leave empty for no member discount.', 'woocommerce'),
             'desc_tip' => true,
             'type' => 'number',
             'custom_attributes' => array(
                 'step' => 'any',
                 'min' => '0'
-            )
+            ),
+            'wrapper_class' => 'form-row form-row-full'
         )
     );
 }
 
-// Save membership price
-function save_membership_price_field($post_id) {
-    $membership_price = isset($_POST['_membership_price']) ? $_POST['_membership_price'] : '';
-    
-    // Check if this is a variable product
-    $product = wc_get_product($post_id);
-    if ($product && $product->is_type('variable')) {
-        // For variable products, get the _level_2_price and save it as _membership_price
-        $level_2_price = get_post_meta($post_id, '_level_2_price', true);
-        $membership_price = $level_2_price;
-    }
-    
-    // Save even if empty (to allow clearing the field)
-    update_post_meta($post_id, '_membership_price', esc_attr($membership_price));
-    
-    // Set this price for all membership levels (2, 3, 4, 5, 6)
-    if (!empty($membership_price)) {
-        for ($level = 2; $level <= 6; $level++) {
-            update_post_meta($post_id, '_level_' . $level . '_price', $membership_price);
+// Save variation membership price
+function save_variation_membership_price_field($variation_id, $i) {
+    if (isset($_POST['_variation_membership_price'][$i])) {
+        $membership_price = sanitize_text_field($_POST['_variation_membership_price'][$i]);
+        update_post_meta($variation_id, '_variation_membership_price', $membership_price);
+        
+        // Also update the PMPro level prices for this variation
+        if (!empty($membership_price)) {
+            // Only set for levels 2, 3, 5, 6 (not 1 and 4)
+            $discount_levels = array(2, 3, 5, 6);
+            foreach ($discount_levels as $level) {
+                update_post_meta($variation_id, '_level_' . $level . '_price', $membership_price);
+            }
+        } else {
+            // Clear the level prices if membership price is empty
+            for ($level = 2; $level <= 6; $level++) {
+                delete_post_meta($variation_id, '_level_' . $level . '_price');
+            }
         }
     }
+}
+
+// Save membership price for simple products
+function save_membership_price_field($post_id) {
+    $product = wc_get_product($post_id);
+    
+    // Only process for simple products (variations handled separately)
+    if ($product && !$product->is_type('variable')) {
+        $membership_price = isset($_POST['_membership_price']) ? $_POST['_membership_price'] : '';
+        
+        // Save even if empty (to allow clearing the field)
+        update_post_meta($post_id, '_membership_price', esc_attr($membership_price));
+        
+        // Set this price only for membership levels 2, 3, 5, 6 (not 1 and 4)
+        if (!empty($membership_price)) {
+            $discount_levels = array(2, 3, 5, 6);
+            foreach ($discount_levels as $level) {
+                update_post_meta($post_id, '_level_' . $level . '_price', $membership_price);
+            }
+        } else {
+            // Clear level prices if membership price is empty
+            for ($level = 2; $level <= 6; $level++) {
+                delete_post_meta($post_id, '_level_' . $level . '_price');
+            }
+        }
+    }
+}
+
+// Apply membership pricing for variable products using PMPro WooCommerce filter
+function apply_variation_membership_pricing($membership_price, $product, $level_id) {
+    // Only apply for membership levels 2, 3, 5, 6
+    $discount_levels = array(2, 3, 5, 6);
+    if (!in_array($level_id, $discount_levels)) {
+        return $membership_price;
+    }
+    
+    // Check if this is a variation
+    if ($product && $product->is_type('variation')) {
+        $variation_id = $product->get_id();
+        $variation_membership_price = get_post_meta($variation_id, '_variation_membership_price', true);
+        
+        // Return the variation-specific price if it exists
+        if (!empty($variation_membership_price)) {
+            return $variation_membership_price;
+        }
+    }
+    
+    return $membership_price;
+}
+
+// Filter variation data to show membership pricing when variation is selected
+function filter_variation_price_display($variation_data, $product, $variation) {
+    if (!is_user_logged_in()) {
+        return $variation_data;
+    }
+    
+    $user_id = get_current_user_id();
+    $membership_level = pmpro_getMembershipLevelForUser($user_id);
+    
+    // Only apply for membership levels 2, 3, 5, 6
+    $discount_levels = array(2, 3, 5, 6);
+    if (!$membership_level || !in_array($membership_level->ID, $discount_levels)) {
+        return $variation_data;
+    }
+    
+    // Get variation membership price
+    $variation_id = $variation->get_id();
+    $membership_price = get_post_meta($variation_id, '_variation_membership_price', true);
+    
+    if (!empty($membership_price) && $membership_price > 0) {
+        // Update the display price to show membership pricing
+        $variation_data['display_price'] = $membership_price;
+        $variation_data['display_regular_price'] = $variation->get_regular_price();
+        
+        // Update price HTML to show strikethrough original price
+        $original_price = $variation->get_regular_price();
+        $variation_data['price_html'] = '<del>' . wc_price($original_price) . '</del> <ins>' . wc_price($membership_price) . '</ins>';
+    }
+    
+    return $variation_data;
 }
 
 // Add CSS styles
@@ -433,38 +610,52 @@ add_action('wp_head', 'pmpro_price_display_css');
 add_action('woocommerce_product_options_pricing', 'add_membership_price_field');
 add_action('woocommerce_process_product_meta', 'save_membership_price_field');
 
-// Function to apply membership pricing in cart
+// Function to apply membership pricing in cart (updated for variations)
 function apply_membership_pricing_to_cart($cart_object) {
     if (!is_user_logged_in()) return;
     
     $user_id = get_current_user_id();
     $membership_level = pmpro_getMembershipLevelForUser($user_id);
     
-    // Only apply discount for level 2 and above
-    if (!$membership_level || $membership_level->ID < 2) return;
+    // Only apply discount for levels 2, 3, 5, 6 (not 1 and 4)
+    $discount_levels = array(2, 3, 5, 6);
+    if (!$membership_level || !in_array($membership_level->ID, $discount_levels)) return;
     
     foreach ($cart_object->get_cart() as $cart_item_key => $cart_item) {
+        $product = $cart_item['data'];
         $product_id = $cart_item['product_id'];
-        $membership_price = get_post_meta($product_id, '_membership_price', true);
+        $variation_id = isset($cart_item['variation_id']) ? $cart_item['variation_id'] : 0;
         
-        if (!empty($membership_price)) {
-            // Store the original price for reference
-            $original_price = get_post_meta($product_id, '_regular_price', true);
+        $membership_price = '';
+        $original_price = $product->get_regular_price();
+        
+        // Check if this is a variation
+        if ($variation_id) {
+            // Get variation-specific membership price
+            $membership_price = get_post_meta($variation_id, '_variation_membership_price', true);
+        } else {
+            // Get simple product membership price
+            $membership_price = get_post_meta($product_id, '_membership_price', true);
+        }
+        
+        if (!empty($membership_price) && $membership_price > 0) {
             // Save the original price as cart item data
             $cart_object->cart_contents[$cart_item_key]['original_price'] = $original_price;
             // Apply the membership price
-            $cart_item['data']->set_price($membership_price);
+            $product->set_price($membership_price);
         }
     }
 }
 
 function display_original_price_in_cart_price($price, $cart_item, $cart_item_key) {
     // Only proceed if we're a member with discount and have original price saved
+    $discount_levels = array(2, 3, 5, 6);
+    
     if (is_user_logged_in() && isset($cart_item['original_price'])) {
         $user_id = get_current_user_id();
         $membership_level = pmpro_getMembershipLevelForUser($user_id);
         
-        if ($membership_level && $membership_level->ID >= 2) {
+        if ($membership_level && in_array($membership_level->ID, $discount_levels)) {
             $original_price = $cart_item['original_price'];
             $original_price_formatted = wc_price($original_price);
             
@@ -478,11 +669,13 @@ function display_original_price_in_cart_price($price, $cart_item, $cart_item_key
 
 function display_original_price_in_cart_subtotal($price, $cart_item, $cart_item_key) {
     // Only proceed if we're a member with discount and have original price saved
+    $discount_levels = array(2, 3, 5, 6);
+    
     if (is_user_logged_in() && isset($cart_item['original_price'])) {
         $user_id = get_current_user_id();
         $membership_level = pmpro_getMembershipLevelForUser($user_id);
         
-        if ($membership_level && $membership_level->ID >= 2) {
+        if ($membership_level && in_array($membership_level->ID, $discount_levels)) {
             $original_price = $cart_item['original_price'];
             
             $quantity = $cart_item['quantity'];
@@ -506,26 +699,37 @@ function display_membership_notice_in_cart($item_name, $cart_item, $cart_item_ke
     return $item_name;
 }
 
-// Function to add membership notice after price
+// Function to add membership notice after price (updated for variations)
 function add_membership_notice_after_price($price_html, $cart_item, $cart_item_key) {
-    // Check if user is logged in
-    $has_membership = false;
+    // Check if user is logged in with discount level
+    $discount_levels = array(2, 3, 5, 6);
+    $has_discount_membership = false;
+    
     if (is_user_logged_in()) {
         $user_id = get_current_user_id();
         $membership_level = pmpro_getMembershipLevelForUser($user_id);
-        // Has membership level 2 or higher
-        if ($membership_level && $membership_level->ID >= 2) {
-            $has_membership = true;
+        // Has membership level 2, 3, 5, or 6
+        if ($membership_level && in_array($membership_level->ID, $discount_levels)) {
+            $has_discount_membership = true;
         }
     }
     
-    // Only show notice for guests or level 1 members
-    if (!$has_membership) {
+    // Only show notice for guests, level 1, or level 4 members
+    if (!$has_discount_membership) {
         $product_id = $cart_item['product_id'];
-        $membership_price = get_post_meta($product_id, '_membership_price', true);
+        $variation_id = isset($cart_item['variation_id']) ? $cart_item['variation_id'] : 0;
+        
+        $membership_price = '';
+        
+        // Check if this is a variation
+        if ($variation_id) {
+            $membership_price = get_post_meta($variation_id, '_variation_membership_price', true);
+        } else {
+            $membership_price = get_post_meta($product_id, '_membership_price', true);
+        }
         
         // If there's a membership price available
-        if (!empty($membership_price)) {
+        if (!empty($membership_price) && $membership_price > 0) {
             $formatted_price = wc_price($membership_price);
             
             $price_html .= '<div class="membership-cart-notice"><span>' . $formatted_price . ' with <a href="https://obahealthclub.com/membership-levels/" target="_blank">paid membership</a></span></div>';
@@ -595,3 +799,13 @@ add_filter('woocommerce_cart_item_subtotal', 'add_membership_notice_after_price'
 add_filter('woocommerce_cart_item_subtotal', 'display_original_price_in_cart_subtotal', 10, 3);
 add_action('wp_head', 'add_cart_price_css');
 add_action('wp_head', 'add_cart_notice_css');
+
+// Add variation membership price fields
+add_action('woocommerce_variation_options_pricing', 'add_variation_membership_price_field', 10, 3);
+add_action('woocommerce_save_product_variation', 'save_variation_membership_price_field', 10, 2);
+
+// Add PMPro WooCommerce filter for variable products
+add_filter('pmprowoo_get_membership_price', 'apply_variation_membership_pricing', 10, 3);
+
+// Filter variation data to show membership pricing on frontend
+add_filter('woocommerce_available_variation', 'filter_variation_price_display', 10, 3);
