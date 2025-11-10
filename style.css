@@ -18,9 +18,9 @@ License URI: license.txt
   color: #000 !important;
 }
 
-.woocommerce-account .woocommerce-MyAccount-content p:first-child {
-  display: none;
-}
+/*.woocommerce-account .woocommerce-MyAccount-content p:first-child {*/
+/*  display: none;*/
+/*}*/
 .product-page__wrapper form.cart:not(.variations_form) {
   display: block !important;
 }

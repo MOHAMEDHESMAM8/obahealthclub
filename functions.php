@@ -17,7 +17,7 @@ function thegem_child_enqueue_styles() {
     wp_enqueue_style('child-style',
         get_stylesheet_directory_uri() . '/style.css',
         array('parent-style'),
-        '1.7.2'
+        '1.7.3'
     );
 }
 add_action('wp_enqueue_scripts', 'thegem_child_enqueue_styles');
@@ -333,3 +333,72 @@ add_filter( 'woocommerce_account_menu_items', function ( $items ) {
     }
     return $items;
 });
+
+
+
+add_shortcode('submission_test', 'user_sub');
+function user_sub()
+{
+    $survey_id = 33;
+
+    global $wpdb;
+    $prefix = $wpdb->prefix . SURVEY_MAKER_DB_PREFIX;
+    $survey_table = $prefix . 'surveys';
+    $questions_table = $prefix . 'questions';
+    $answers_table = $prefix . 'answers';
+
+    // 1. Fetch the survey record
+    $survey = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$survey_table} WHERE id = %d", $survey_id), ARRAY_A);
+    if (!$survey) {
+        return new WP_REST_Response(['success' => false, 'message' => 'Survey not found.'], 404);
+    }
+
+    // 2. Read the comma-separated question_ids
+    $question_ids = array_filter(array_map('absint', explode(',', $survey['question_ids'])));
+
+    $questions = [];
+//    $questions_temp = [];
+    if ($question_ids) {
+        // 3. Fetch questions by IN list
+        $placeholders = implode(',', array_fill(0, count($question_ids), '%d'));
+        $questions_temp = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$questions_table} WHERE id IN ($placeholders) ORDER BY FIELD(id, $placeholders)",
+                array_merge($question_ids, $question_ids)
+            ),
+            ARRAY_A
+        );
+        foreach ($questions_temp as $question) {
+            $options = json_decode($question['options']);
+            $questions[] = [
+                'id'        => $question['id'],
+                'question'  => $question['question'],
+                'type'      => $question['type'],
+                'required'  => $options->required == 'on' ? true : false,
+            ];
+        }
+        // 4. For each question fetch its answers
+        foreach ($questions as &$q) {
+            $answers_temp = $wpdb->get_results(
+                $wpdb->prepare("SELECT * FROM {$answers_table} WHERE question_id = %d ORDER BY ordering ASC", absint($q['id'])),
+                ARRAY_A
+            );
+            foreach ($answers_temp as $answer) {
+                $q['answers'][] = [
+                    'id'     => $answer['id'],
+                    'answer' => $answer['answer'],
+                ];
+            }
+        }
+    }
+
+    echo "<pre>";
+    var_dump([
+        'success' => true,
+        'data'    => [
+            'questions' => $questions,
+        ],
+    ]);
+    echo "</pre>";
+}
+
