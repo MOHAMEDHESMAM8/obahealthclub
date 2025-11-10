@@ -17,7 +17,7 @@ function thegem_child_enqueue_styles() {
     wp_enqueue_style('child-style',
         get_stylesheet_directory_uri() . '/style.css',
         array('parent-style'),
-        '1.6.17'
+        '1.7.2'
     );
 }
 add_action('wp_enqueue_scripts', 'thegem_child_enqueue_styles');

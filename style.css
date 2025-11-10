@@ -122,3 +122,19 @@ ul.subsubsub li a:hover  {
     color:  #C7A42D !important;
 }
 
+
+.woocommerce-MyAccount-navigation-link.woocommerce-MyAccount-navigation-link--customer-logout.red-icon-btn {
+
+  order: 999 !important;
+}
+.wcmamtx_vertical{
+  display: grid !important;
+}
+.red-icon-btn .woocommerce-MyAccount-navigation-link_a{
+  background-color: #ad0000 !important;
+  color: #fff !important;
+}
+
+.red-icon-btn .woocommerce-MyAccount-navigation-link_a .fa{
+  color: #fff !important;
+}
