@@ -69,8 +69,6 @@ require_once get_stylesheet_directory() . '/includes/display_name.php';
 
 
 
-
-
 // add_action('woocommerce_review_order_before_payment', 'show_estimated_delivery_note');
 
 // function show_estimated_delivery_note() {
@@ -402,3 +400,4 @@ function user_sub()
     echo "</pre>";
 }
 
+// Include dokan-vendor-customizations.php
